@@ -39,7 +39,7 @@ halt 关闭系统，等同于 shutdown –h now 和 poweroff
 
  下面是一个简单的样例 ：
 
-![img](./imgs/20170119140908226) 
+![img](./imgs/20170119140908226.png) 
 
 
 
@@ -53,7 +53,7 @@ halt 关闭系统，等同于 shutdown –h now 和 poweroff
 
 #### 1.2 重启命令：`reboot`
 
-![img](./imgs/20170119141151302) 
+![img](./imgs/20170119141151302.png) 
 
 
 
@@ -512,7 +512,7 @@ rm: remove regular file `bashrc'? y
 
 #### 1.3 【改】修改文件 `vi` 或 `vim`
 
- ![img](./imgs/aHR0cHM6Ly93d3cucnVub29iLmNvbS93cC1jb250ZW50L3VwbG9hZHMvMjAxNS8xMC92aS12aW0tY2hlYXQtc2hlZXQtc2NoLmdpZg) 
+ ![img](./imgs/2731894710.png) 
 
 #### vi/vim 的使用
 
@@ -565,7 +565,7 @@ rm: remove regular file `bashrc'? y
 
 简单的说，我们可以将这三个模式想成底下的图标来表示：
 
-![](./imgs/vim-vi-workmodel-1.jpg) 
+![](./imgs/vim-vi-workmodel-1.png) 
 
 
 
@@ -585,7 +585,7 @@ rm: remove regular file `bashrc'? y
 `a`：在光标所在字符后开始插入
 `o`：在光标所在行的下面另起一新行插入
 
-![img](./imgs/cdsgucjhosicpscomPMCOP) 
+![img](./imgs/cdsgucjhosicpscomPMCOP.png) 
 
 **保存文件**
 
@@ -822,11 +822,11 @@ r 表示可读取，w 表示可写入，x 表示可执行，X 表示只有当该
 
  r=4,w=2,x=1，所以想要rxw 读写和可执行权限，那就是`4+2+1=7`，而一个位数表示一个角色 
 
-![image-20200623235018238](./imgs/format,png) 
+![image-20200623235018238](./imgs/format.png) 
 
  **符号类型改变档案权限：** 
 
-![image-20200623235026243](./imgs/ftkviuobo) 
+![image-20200623235026243](./imgs/ftkviuobo.png) 
 
 
 
