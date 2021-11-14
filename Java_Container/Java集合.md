@@ -2806,17 +2806,333 @@ private void deleteEntry(Entry<K,V> p) {
 
 
 
-## 五、HashTable
+## 五、Hashtable
+
+**类图：**
+
+![1636881227078](./images/1636881227078.png)
+
+Hashtable 的函数都是**同步**的，这意味着它是线程安全的，能用于多线程环境中, 但是 HashTable 线程安全的策略实现代价却太大了，简单粗暴，get/put 所有相关操作都是 synchronized 的，这相当于给整个哈希表加了一把大锁，多线程访问时候，只要有一个线程访问或操作该对象，那其他线程只能阻塞，相当于将所有的操作串行化，在竞争激烈的并发场景中性能就会非常差。
+
+**它的key、value都不可以为null。**
+
+Hashtable中的映射**不是有序**的。
+
+Hashtable采用"**拉链法**"实现哈希表。
 
 
 
+### 1. Hashtable 的属性
+
+```java
+/**
+ * 哈希表数据
+ */
+private transient Entry<?,?>[] table;
+
+/**
+ * 哈希表中元素的总数
+ */
+private transient int count;
+
+/**
+ * Hashtable的阈值，用于判断是否需要调整Hashtable的容量。threshold的值="容量*加载因子"
+ */
+private int threshold;
+
+/**
+ * 装载因子
+ */
+private float loadFactor;
+
+/**
+ * Hashtable被改变的次数，用于fail-fast机制的实现
+ * 所谓快速失败就是在并发集合中，其进行迭代操作时，若有其他线程对其进行结构性的修改，这时迭代器会立马感知到，并且立即抛出ConcurrentModificationException异常，而不是等到迭代完成之后才告诉你（你已经出错了）
+ */
+private transient int modCount = 0;
+```
 
 
 
+### 2. Hashtable 的构造方法
+
+```java
+/**
+ * 用指定初始容量和指定装载因子构造一个新的空哈希表。
+ */
+public Hashtable(int initialCapacity, float loadFactor) {
+    if (initialCapacity < 0)
+        throw new IllegalArgumentException("Illegal Capacity: "+
+                                           initialCapacity);
+    //加载因子必须为正且必须是数字
+    if (loadFactor <= 0 || Float.isNaN(loadFactor))
+        throw new IllegalArgumentException("Illegal Load: "+loadFactor);
+    //如果初始容量为0则让其等于1
+    if (initialCapacity==0)
+        initialCapacity = 1;
+    //初始化加载因子
+    this.loadFactor = loadFactor;
+    //创建一个Entry类型的数组长度为参数initialCapacity的值
+    table = new Entry<?,?>[initialCapacity];
+    //计算阀值在初始容量乘以加载因子的值和后者（整数最大32位）之间取最小值。
+    threshold = (int)Math.min(initialCapacity * loadFactor, MAX_ARRAY_SIZE + 1);
+}
+
+/**
+ * 用指定初始容量和默认的加载因子 (0.75) 构造一个新的空哈希表。
+ */
+public Hashtable(int initialCapacity) {
+    this(initialCapacity, 0.75f);
+}
+
+/**
+ * 默认构造函数，容量为11，加载因子为0.75。
+ */
+public Hashtable() {
+    this(11, 0.75f);
+}
+
+/**
+ * 根据传入的Map集合直接初始化HashTable,容量为传入Map集合容量大小*2与11进行比较，取值较大者
+ */
+public Hashtable(Map<? extends K, ? extends V> t) {
+    this(Math.max(2*t.size(), 11), 0.75f);
+    putAll(t);
+}
+```
+
+**在初始化阶段，Hashtable 就已经为 table 属性开辟了内存空间**，这和 HashMap 中不同，HashMap 是在第一次调用 put 方法时才为 table 开辟内存的。还有就是默认初始容量不同，一个16一个11。 
 
 
 
+### 3. put 方法
 
+```java
+public synchronized V put(K key, V value) {
+    // Make sure the value is not null
+    // 值不能等于null 与hashmap不同
+    if (value == null) {
+        throw new NullPointerException();
+    }
+
+    // Makes sure the key is not already in the hashtable.
+    //确保该键不在哈希表中
+
+    //迭代table，将其赋值给局部变量tab
+    Entry<?,?> tab[] = table;
+    //计算key的hash值，确认在table[]中的索引位置
+    //这里如果key为null调用Object的hashCode方法就会报空指针异常，所以key也不能为null
+    int hash = key.hashCode();
+    // 计算索引位置，这里与hashmap不同
+    /**
+    * 0x7FFFFFFF: 16进制表示的整型,是整型里面的最大值
+    * 0x7FFFFFFF: 0111 1111 1111 1111 1111 1111 1111 1111：除符号位外的所有1
+    * (hash & 0x7FFFFFFF) 将产生正整数
+    * (hash & 0x7FFFFFFF) % tab.length 将在标签长度的范围内
+    * 所以hashtable采用奇数导致的hash冲突会比较少，采用偶数会导致的冲突会增多
+    * 4%2 = 6%2 = 8%2 ……
+    */
+    int index = (hash & 0x7FFFFFFF) % tab.length;
+    @SuppressWarnings("unchecked")
+    Entry<K,V> entry = (Entry<K,V>)tab[index];
+    //遍历对应index位置的链表
+    for(; entry != null ; entry = entry.next) {
+        //如果已经有了相同key的元素 ，则更新数据，返回原来的元素
+        if ((entry.hash == hash) && entry.key.equals(key)) {
+            V old = entry.value;
+            entry.value = value;
+            return old;
+        }
+    }
+    // 增加新Entry元素
+    addEntry(hash, key, value, index);
+    return null;
+}
+```
+
+- 可以看到 put 方法加了 `synchronized` 维护，所以这个方法是**线程安全**的
+- 从计算 hash 就可以看出为什么采用 11 奇数作为初始容量
+- `put` 方法不允许 key 和 value 为 `null` 值，如果发现是 `null`，则直接抛出异常
+
+**addEntry 方法**
+
+```java
+private void addEntry(int hash, K key, V value, int index) {
+    modCount++;
+
+    Entry<?,?> tab[] = table;
+    //元素个数大于阈值则将扩容
+    if (count >= threshold) {
+        // Rehash the table if the threshold is exceeded
+        rehash();
+        //扩容后也找到index，也就是链表对应的索引
+        tab = table;
+        hash = key.hashCode();
+        index = (hash & 0x7FFFFFFF) % tab.length;
+    }
+
+    // Creates the new entry.
+    @SuppressWarnings("unchecked")
+    //拿到该index下的链表的头结点
+    Entry<K,V> e = (Entry<K,V>) tab[index];
+    //然后采用头插法将元素插入,这里和jdk8中hashmap不同
+    tab[index] = new Entry<>(hash, key, value, e);
+    count++;
+}
+```
+
+- Hashtable 采用的是**头插法**插入元素，与 jdk8 中的 HashMap 不同。
+
+**rehash 方法**
+
+```java
+protected void rehash() {
+    //原来的容量(旧的数组的长度)
+    int oldCapacity = table.length;
+    //将原来的table保存起来
+    Entry<?,?>[] oldMap = table;
+
+    // overflow-conscious code
+    //新容量 原来两倍加一  保证奇数
+    int newCapacity = (oldCapacity << 1) + 1;
+    //太大了就完蛋了
+    if (newCapacity - MAX_ARRAY_SIZE > 0) {
+        if (oldCapacity == MAX_ARRAY_SIZE)
+            // Keep running with MAX_ARRAY_SIZE buckets
+            return;
+        newCapacity = MAX_ARRAY_SIZE;
+    }
+    //新容量定义新数组
+    Entry<?,?>[] newMap = new Entry<?,?>[newCapacity];
+
+    modCount++;
+    //求出新的阈值
+    threshold = (int)Math.min(newCapacity * loadFactor, MAX_ARRAY_SIZE + 1);
+    //进行数组转换
+    table = newMap;
+
+    // 把旧哈希表的键值对重新哈希到新哈希表中去（双重循环，十分耗时！）
+    // 这个方法类似于HashMap扩容后，将旧数组数据赋给新数组，
+    // 在HashMap中会将其旧数组每个桶位进一步‘打散'，放置到新数组对应的桶位上（有一个重新计算桶位的过程）
+    for (int i = oldCapacity ; i-- > 0 ;) {
+        //遍历每条链表
+        for (Entry<K,V> old = (Entry<K,V>)oldMap[i] ; old != null ; ) {
+            Entry<K,V> e = old;
+            old = old.next;
+            //将每条链表的每个结点打乱重新hash 重新组建找到自己的位置，还是头结点插入
+            int index = (e.hash & 0x7FFFFFFF) % newCapacity;
+            e.next = (Entry<K,V>)newMap[index];
+            newMap[index] = e;
+        }
+    }
+}
+```
+
+- 扩容 **2倍+1**
+- 更新阈值，更新 table
+- 遍历旧表中的节点，计算在新表中的 index，插入到对应位置链表的**头部**
+
+
+
+### 4. get 方法
+
+```java
+public synchronized V get(Object key) {
+    Entry<?,?> tab[] = table;
+    int hash = key.hashCode();
+    int index = (hash & 0x7FFFFFFF) % tab.length;
+    for (Entry<?,?> e = tab[index] ; e != null ; e = e.next) {
+        if ((e.hash == hash) && e.key.equals(key)) {
+            return (V)e.value;
+        }
+    }
+    return null;
+}
+```
+
+- `synchronized` 保证线程安全
+
+
+
+### 5. remove 方法
+
+```java
+public synchronized V remove(Object key) {
+    Entry<?,?> tab[] = table;
+    int hash = key.hashCode();
+    int index = (hash & 0x7FFFFFFF) % tab.length;
+    @SuppressWarnings("unchecked")
+    Entry<K,V> e = (Entry<K,V>)tab[index];
+    //找到删除结点的前结点prev
+    for(Entry<K,V> prev = null ; e != null ; prev = e, e = e.next) {
+        if ((e.hash == hash) && e.key.equals(key)) {
+            modCount++;
+            //e的前结点不为空
+            if (prev != null) {
+                //把e删除了 
+                prev.next = e.next;
+                //e是头结点
+            } else {
+                //把e的下一个节点左头结点
+                tab[index] = e.next;
+            }
+            count--;
+            V oldValue = e.value;
+            //交给gc处理e
+            e.value = null;
+            //返回旧的值
+            return oldValue;
+        }
+    }
+    return null;
+}
+```
+
+- `synchronized` 保证线程安全
+- 存在就删除并返回删除的值，不存在返回 `null`
+
+
+
+### 6. Hashtable 和 HashMap 的区别
+
+**共同点：**
+
+- 从存储结构和实现来讲基本上是相同的，底层都是 **散列表（数组+链表）**
+
+**不同点：**
+
+- 同步性：
+  - HashMap 非同步（可以通过 `Collections.synchronizedMap(hashMap)`，使其实现同步。 ）
+  - Hashtable 同步（但不常使用，而是选择 ConcurrentHashMap）
+- 是否允许为 null
+  - HashMap 允许为 null（一个为 null 的 key 和任意个为 null 的 value；遇到 key 为 null 的时候，调用 putForNullKey 方法进行处理，而对 value 没有处理 ）
+  - Hashtable 不允许为 null（key、value 都不能为 null；遇到 null，直接返回 NullPointerException。）
+- 默认初始大小和扩容方式
+  - HashMap 中 table 大小默认为 16，扩容为原来 `2倍`
+  - Hashtable 中 table 大小默认为 11，扩容方式为 `old * 2 + 1`
+
+- 哈希值的使用
+
+  - HashMap 得到 hashCode 后需要进行高位运算
+
+  - Hashtable 直接使用对象的 hashCode
+
+  - ```java
+    // HashTable
+    int hash = key.hashCode();
+    ========================
+    // HashMap
+    int  hash =  hash(key)
+    static final int hash(Object key) {
+        int h;
+        return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+    }
+    ```
+
+- 继承
+
+  - HashMap 基于 AbstractMap，AbstractMap 是基于 Map 接口的实现，它以最大限度地减少实现此接口所需的工作。 
+  - Hashtable 基于 Dictionary 类，Dictionary 是任何可将键映射到相应值的类的抽象父类 。
 
 
 
