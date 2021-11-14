@@ -1,6 +1,6 @@
-# Java集合
+Java集合
 
-> 王嘉豪
+> From Mars
 
 # 目录大纲
 
@@ -1585,7 +1585,7 @@ public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneabl
 
 
 
-HashMap 中还有一个内部类 Node，用于存放散列表下的链表结构中的节点元素：
+HashMap 中还有一个**内部类 Node**，用于存放散列表下的链表结构中的节点元素：
 
 ![1636785301797](./images/1636785301797.png)
 
@@ -1953,37 +1953,854 @@ final Node<K,V> getNode(int hash, Object key) {
 
 
 
-通过上面的继承体系，我们知道它继承了HashMap，所以它的内部也有(数组+链表+红黑树)这三种结构，但是它还额外添加了一种“双向链表”的结构存储所有元素的顺序。
+通过上面的继承体系，我们知道它继承了 HashMap，所以它的内部也有(数组+链表+红黑树)这三种结构，但是它还额外添加了一种“双向链表”的结构存储所有元素的顺序。
 
-添加删除元素的时候需要同时维护在HashMap中的存储，也要维护在LinkedList中的存储，所以性能上来说会比HashMap稍慢。
+添加删除元素的时候需要同时维护在 HashMap 中的存储，也要维护在 LinkedList 中的存储，所以性能上来说会比HashMap稍慢。
 
  ![img](./images/249993-20161215143120620-1544337380.png) 
 
 
 
+### 1. LinkedHashMap 的属性
+
+![1636803993150](./images/1636803993150.png)
+
+- head
+
+  双向链表的头节点，旧数据存在头节点。
+
+- tail
+
+  双向链表的尾节点，新数据存在尾节点。
+
+- accessOrder
+
+  是否需要按访问顺序排序，通过注释发现该变量为 true 时 access-order，即按访问顺序遍历，此时你任何一次的操作，包括 put、get 操作，都会改变map中已有的存储顺序，如果为 false，则表示按插入顺序遍历。默认为 false 也就是按照插入顺序。
 
 
 
+**内部类：**
+
+下面两个内部类都是用于存储节点，继承自HashMap 的 Node类，其 next 属性用于单链表存储于桶中，而 Entry 类的 before 和 after 用于双向链表存储所有元素。 
+
+```java
+// 位于LinkedHashMap中
+static class Entry<K,V> extends HashMap.Node<K,V> {
+    Entry<K,V> before, after;
+    Entry(int hash, K key, V value, Node<K,V> next) {
+        super(hash, key, value, next);
+    }
+}
+// 位于HashMap中
+static class Node<K,V> implements Map.Entry<K,V> {
+    final int hash;
+    final K key;
+    V value;
+    Node<K,V> next;
+    Node(int hash, K key, V value, Node<K,V> next) {
+        this.hash = hash;
+        this.key = key;
+        this.value = value;
+        this.next = next;
+    }
+    ...
+}
+```
 
 
 
+### 2. LinkedHashMap 的构造方法
+
+![1636804800896](./images/1636804800896.png)
+
+```java
+/**
+ * 构造方法1，构造一个指定初始容量和负载因子的、按照插入顺序的LinkedList
+ */
+public LinkedHashMap(int initialCapacity, float loadFactor) {
+    super(initialCapacity, loadFactor);
+    accessOrder = false;
+}
+
+/**
+ * 构造方法2，构造一个指定初始容量的LinkedHashMap，取得键值对的顺序是插入顺序
+ */
+public LinkedHashMap(int initialCapacity) {
+    super(initialCapacity);
+    accessOrder = false;
+}
+
+/**
+ * 构造方法3，用默认的初始化容量和负载因子创建一个LinkedHashMap，取得键值对的顺序是插入顺序
+ */
+public LinkedHashMap() {
+    super();  //其实就是调用的hashmap的默认构造方法，默认加载因子0.75
+    accessOrder = false;
+}
+
+/**
+ * 构造方法4，通过传入的map创建一个LinkedHashMap，容量为默认容量（16）和(map.zise()/DEFAULT_LOAD_FACTORY)+1的较大者，加
+ *载因子为默认值
+ */
+public LinkedHashMap(Map<? extends K, ? extends V> m) {
+    super(m);
+    accessOrder = false;
+}
+
+/**
+ * 构造方法5，根据指定容量、加载因子和键值对保持顺序创建一个LinkedHashMap
+ */
+public LinkedHashMap(int initialCapacity, float loadFactor, boolean accessOrder) {
+    super(initialCapacity, loadFactor);
+    this.accessOrder = accessOrder;
+}
+```
+
+- 前四个构造方法 `accessOrder` 都等于 `false`，说明双向链表是按插入顺序存储元素。
+- 最后一个构造方法 `accessOrder` 从构造方法参数传入，如果传入`true`，则就实现了**按访问顺序存储元素**，这也是实现 **LRU 缓存策略** 的关键。
 
 
 
+### 3. newNode 方法
+
+LinkedHashMap 重写了 newNode() 方法，**通过此方法保证了插入的顺序性**，在此之前先看一下 HashMap 的 newNode() 方法 ：
+
+```java
+Node<K,V> newNode(int hash, K key, V value, Node<K,V> next) {
+    return new Node<>(hash, key, value, next);
+}
+```
+
+ 再看一下 LinkedHashMap 的 newNode() 方法 ：
+
+```java
+Node<K,V> newNode(int hash, K key, V value, Node<K,V> e) {
+    LinkedHashMap.Entry<K,V> p =
+        new LinkedHashMap.Entry<K,V>(hash, key, value, e);//其实还是用的hashmap中的方法
+    linkNodeLast(p);
+    return p;
+}
+```
+
+> 在构建新节点时，构建的是 LinkedHashMap.Entry 不再是 Node。
+
+这里调用了一个方法 `linkNodeLast()`，我们看一下这个方法，这个方法不止完成了串联后置，也完成了串联前置，所以`插入的顺序性`是通过这个方法保证的。 
+
+### 4. LinkNodeLast 方法
+
+```java
+// link at the end of list 链接当前结点和尾结点
+private void linkNodeLast(LinkedHashMap.Entry<K,V> p) {
+    //保存尾结点引用
+    LinkedHashMap.Entry<K,V> last = tail;
+    tail = p;
+    //如果这条链表为空。则直接设置为头结点
+    if (last == null)
+        head = p;
+    else {
+        //将p结点与尾结点相连通
+        p.before = last;
+        last.after = p;
+    }
+}
+```
+
+- **插入的顺序的保证是通过newNode()方法再调用linkNodeLast()**
+- 将新插入的结点连接到尾结点
 
 
+
+### 5. afterNodeAccess 方法
+
+```java
+//也就是把p结点从中间拿出来放到尾部
+void afterNodeAccess(Node<K,V> e) { // move node to last 将节点移动到最后一个
+    LinkedHashMap.Entry<K,V> last;
+    // accessOrder 确定是按照访问顺序的，如果当前节点不是最后节点，因为是的话就不用移了
+    if (accessOrder && (last = tail) != e) {
+        //强转一下e给到p。然后把e的前后结点都取出来
+        LinkedHashMap.Entry<K,V> p =
+            (LinkedHashMap.Entry<K,V>)e, b = p.before, a = p.after;
+        //因为要插到最后所以先给null
+        p.after = null;
+        //如果p结点前结点为空，将p的后结点变头结点
+        if (b == null)
+            head = a;
+        else
+            //将p的前结点指向p的后结点 b>p>a   b>a
+            b.after = a;
+        //将a也指向b  a<>b
+        if (a != null)
+            a.before = b;
+        else
+            //a等于null，就将b作为尾结点
+            last = b;
+        if (last == null)
+            head = p;
+        else {
+            // last<>p
+            p.before = last;
+            last.after = p;
+        }
+        //尾结点p
+        tail = p;
+        ++modCount;
+    }
+}
+```
+
+- 在 HashMap 中没给具体实现，而在LinkedHashMap 重写了这个方法，目的是**保证操作过的Node节点永远在最后**，从而保证读取的顺序性，在调用 **put 方法和 get 方法**时都会用到。
+- 从双向链表中移除访问的节点，把访问的节点加到双向链表的末尾；（末尾为最新访问的元素）
+
+
+
+> newNode() 方法中调用的 linkNodeLast(Entry e) 方法和现在的 afterNodeAccess(Node e) 都是**将传入的Node节点放到最后**，那么它们的使用场景如何呢？ 
+
+HashMap 的 put 流程中，如果在对应的 hash 位置上还没有元素，那么直接 new Node() 放到数组 table 中，这个时候对应到 LinkedHashMap 中，**调用了 newNode() 方法，就会用到 linkNodeLast()，将新 node 放到双向链表的最后。**
+
+如果对应的 hash 位置上有元素，进行元素值的覆盖时，就会**调用 afterNodeAccess()，将原本可能不是最后的 node 节点移动到了最后。**
+
+
+
+### 6. put 方法
+
+LinkedHashMap 并没有重写 HashMap 中的 put 方法，而是直接继承来使用。所以 LinkedHashMap 和 HashMap 的 put 方法是一样的。
+
+**进行适当删减后的 put 方法逻辑：**
+
+```java
+final V putVal(int hash, K key, V value, boolean onlyIfAbsent,boolean evict) {
+    if ((p = tab[i = (n - 1) & hash]) == null)
+    		// 调用linkNodeLast方法将新元素放到最后
+        tab[i] = newNode(hash, key, value, null);
+    else {
+        if (e != null) {
+        	// 如果key已经存在
+            V oldValue = e.value;
+            if (!onlyIfAbsent || oldValue == null)
+                e.value = value;
+            // 将存在的节点放到最后(因为存在所以是Access，也就是访问存在的元素)
+            afterNodeAccess(e);
+            return oldValue;
+        }
+    }
+    ++modCount;
+    if (++size > threshold)
+        resize();   
+    afterNodeInsertion(evict);
+    return null;
+}
+```
+
+
+
+### 7. get 方法
+
+```java
+public V get(Object key) {
+    Node<K,V> e;
+    // 调用HashMap定义的方法获取对应的节点
+    if ((e = getNode(hash(key), key)) == null)
+        return null;
+    if (accessOrder)
+        afterNodeAccess(e); // 如果是采用访问顺序遍历就会将该节点放到链表尾部
+    return e.value;
+}
+```
+
+
+
+### 8. remove 方法
+
+对于 `remove` 方法，在 LinkedHashMap 中也没有重写，它调用的还是父类 HashMap 的 `remove() `方法，在 LinkedHashMap 中重写的是： `afterNodeRemoval(Node<K,V> e)` 这个方法。
+
+### 9. afterNodeRemoval 方法
+
+```java
+//就是将e从双链表中移除
+void afterNodeRemoval(Node<K,V> e) { // unlink
+    // b<>p<>a
+    LinkedHashMap.Entry<K,V> p =
+        (LinkedHashMap.Entry<K,V>)e, b = p.before, a = p.after;
+    //将p脱离
+    p.before = p.after = null;
+    if (b == null)
+        head = a;
+    else
+        //b>a
+        b.after = a;
+    if (a == null)
+        tail = b;
+    else
+        //b<>a
+        a.before = b;
+}
+```
+
+- 在节点被删除之后调用的方法
+- 因为 LinkedHashMap 的双向链表连接了 LinkedHashMap 中的所有元素，HashMap 中的删除方法可没有考虑这些，它只考虑了如何存红黑树、链表中删除节点，是不维护双向链表的，所以这里才有了这个方法的实现
+
+在 remove 的时候会涉及到这个重写的 afterNodeRemoval 方法：
+
+![1636807340334](./images/1636807340334.png)
+
+
+
+### 10. 遍历
+
+`Set<Map.Entry<K,V>> entrySet() `是被重写的了：
+
+![1636807540620](./images/1636807540620.png)
+
+![1636807592047](./images/1636807592047.png)
+
+到这就可以解释为什么**初始容量对遍历没有影响**：
+
+因为它遍历的是 LinkedHashMap 内部维护的一个双向链表，而不是散列表。
+
+
+
+### 11. 总结
+
+**四个维护双向链表的方法：**
+
+- `afterNodeAccess(Node<K,V> p)`
+
+  访问元素之后维护 
+
+- `afterNodeInsertion(boolean evict)`
+
+  插入元素之后维护 
+
+- `afterNodeRemoval(Node<K,V> p)`
+
+  删除元素之后维护 
+
+- `linkNodeLast(LinkedHashMap.Entry<K,V> p)`
+
+  也是插入元素之后维护，但是只用于桶上的第一个节点，后面的节点都是用afterNodeAccess或者afterNodeInsertion 
+
+**LinkedHashMap**
+
+（1）LinkedHashMap 继承自 HashMap，具有 HashMap 的所有特性；
+
+（2）LinkedHashMap 内部维护了一个**双向链表**存储所有的元素，LinkedHashMap 指的是遍历的时候的有序性，而有序性是通过双向链表实现的，真实的存储之间是没有顺序的。LinkedHashMap 实现了很多方法来维护这个有序性。
+
+（3）如果 accessOrder 为 false，则可以按**插入元素**的顺序遍历元素；
+
+（4）如果 accessOrder 为 true，则可以按**访问元素**的顺序遍历元素，也就是无论 put、get 都会将元素放到链表尾部；
+
+（5）默认的 LinkedHashMap 并不会移除旧元素，如果需要移除旧元素，则需要重写 removeEldestEntry() 方法设定移除策略；
+
+（6）LinkedHashMap 可以用来实现 **LRU 缓存淘汰策略**；
+
+（7）如何实现一个固定大小的 LinkedHashMap？继承 LinkedHashMap 实现 removeEldestEntry 方法，当插入成功后，判断是否要删除最老节点。
 
 
 
 ## 四、TreeMap
 
+**类图：**
+
+![1636808885235](./images/1636808885235.png)
+
+类注释：
+
+![1636808960339](./images/1636808960339.png)
+
+- TreeMap 实现了 NavigableMap 接口，而 NavigableMap 接口继承着 SortedMap 接口，致使 **TreeMap 是有序的** 
+- TreeMap底层是**红黑树**，它方法的时间复杂度大都是 log(n) 
+- **非同步** 
+- 使用 Comparator 或者 Comparable 来比较 key 是否相等与排序的问题
 
 
 
+### 1. TreeMap 的属性
+
+![1636809205622](./images/1636809205622.png)
+
+```java
+/**
+ * 比较器，因为TreeMap是有序的，通过comparator接口我们可以对TreeMap的内部排序进行控制
+ */
+private final Comparator<? super K> comparator;
+
+/**
+ *TreeMap红-黑节点，为TreeMap的内部类 root红黑树的根节点
+ */
+private transient Entry<K,V> root;
+
+/**
+ * TreeMap中存放的键值对的数量
+ */
+private transient int size = 0;
+
+/**
+ * 修改的次数
+ */
+private transient int modCount = 0;
+```
 
 
 
+### 2. TreeMap 的构造方法
 
+![1636809244799](./images/1636809244799.png)
+
+```java
+/**
+ * 默认构造方法，比较器为null,那么会使用key的比较器,也就意味着key必须实现Comparable接口,否则在比较的时候就会出现异常
+ */
+public TreeMap() {
+    comparator = null;
+}
+
+/**
+ * 使用传入的comparator比较两个key的大小
+ */
+public TreeMap(Comparator<? super K> comparator) {
+    this.comparator = comparator;
+}
+
+/**
+ * key必须实现Comparable接口，把传入map中的所有元素保存到新的TreeMap中
+ */
+public TreeMap(Map<? extends K, ? extends V> m) {
+    comparator = null;
+    putAll(m);
+}
+
+/**
+ * 使用传入map的比较器，并把传入map中的所有元素保存到新的TreeMap中
+ */
+public TreeMap(SortedMap<K, ? extends V> m) {
+    comparator = m.comparator();
+    try {
+        buildFromSorted(m.size(), m.entrySet().iterator(), null, null);
+    } catch (java.io.IOException cannotHappen) {
+    } catch (ClassNotFoundException cannotHappen) {
+    }
+}
+```
+
+TreeMap构造方法主要分成两类，一类是**使用 comparator 比较器**，一类是 **key 必须实现 Comparable 接口**。构造方法中比较器的值为 null，采用**自然排序**的方法，如果指定了比较器则称之为**定制排序**：
+
+- **自然排序**：TreeMap 的所有 key 必须实现 Comparable 接口，所有的 key 都是同一个类的对象
+- **定制排序**：创建 TreeMap 对象传入了一个 Comparator 对象，该对象负责对 TreeMap 中所有的 key 进行排序，采用定制排序不要求 Map 的 key 实现 Comparable 接口。
+
+
+
+### 3. 红黑树结点结构
+
+```java
+static final class Entry<K,V> implements Map.Entry<K,V> {
+    K key;// 键
+    V value;// 值
+    Entry<K,V> left;// 左节点
+    Entry<K,V> right;// 右节点
+    Entry<K,V> parent;// 父节点
+    /**
+     * 结点颜色 默认为黑 只有两种颜色，红色和黑色
+     */
+    boolean color = BLACK;
+}
+```
+
+
+
+### 4. put 方法
+
+```java
+public V put(K key, V value) {
+    Entry<K,V> t = root;
+    //如果根结点为null，还没建立
+    if (t == null) {
+        //官方给的是：类型（可能为null）检查
+        compare(key, key); // type (and possibly null) check
+        //制造一个根结点，默认为黑
+        root = new Entry<>(key, value, null);
+        size = 1;
+        modCount++;
+        return null;
+    }
+    //定义一个cmp，这个变量用来进行二分查找时的比较
+    int cmp;
+    Entry<K,V> parent;
+    // split comparator and comparable paths 拆分比较器和可比较路径
+    //也就是 cpr表示有无自己定义的排序规则，分两种情况遍历执行，主要目的就是找到要插入结点的父结点
+    Comparator<? super K> cpr = comparator;
+    if (cpr != null) {
+        do {
+            //存取要插入结点的父结点
+            parent = t;
+            //比较新的key与根结点key的大小，相当于维护了二叉排序树
+            cmp = cpr.compare(key, t.key);
+            //小的就放左边
+            if (cmp < 0)
+                t = t.left;
+            //大的就放右边
+            else if (cmp > 0)
+                t = t.right;
+            //一样就覆盖，并返回旧的值
+            else
+                return t.setValue(value);
+        } while (t != null);
+    }
+    //如果比较器为空，则使用key作为比较器进行比较
+    else {
+        //这里要求key不能为空，并且必须实现Comparable接口
+        if (key == null)
+            throw new NullPointerException();
+        @SuppressWarnings("unchecked")
+        //类型转换，也就相当于实现Comparable接口
+        Comparable<? super K> k = (Comparable<? super K>) key;
+        do {
+            parent = t;
+            cmp = k.compareTo(t.key);
+            if (cmp < 0)
+                t = t.left;
+            else if (cmp > 0)
+                t = t.right;
+            else
+                return t.setValue(value);
+        } while (t != null);
+    }
+    //构建新的结点，其父结点就是上面找到的
+    Entry<K,V> e = new Entry<>(key, value, parent);
+    //判断插左边还是右边
+    if (cmp < 0)
+        parent.left = e;
+    else
+        parent.right = e;
+    //新插入节点为了保持红黑树平衡，对红黑树进行调整 进行平衡处置，如【变色】【左旋】【右旋】
+    fixAfterInsertion(e);
+    size++;
+    modCount++;
+    return null;
+}
+```
+
+`compare`
+
+```java
+//比较方法，如果comparator==null ,采用comparable.compartTo进行比较，否则采用指定比较器比较大小
+final int compare(Object k1, Object k2) {
+    return comparator==null ? ((Comparable<? super K>)k1).compareTo((K)k2)
+        : comparator.compare((K)k1, (K)k2);
+}
+```
+
+
+
+### 5. fixAfterInsertion 调整红黑树 
+
+```java
+private void fixAfterInsertion(Entry<K,V> x) {
+    //插入结点的颜色默认是红色
+    x.color = RED;
+    //非空，非根结点，父结点为红结点，否则不用操作
+    while (x != null && x != root && x.parent.color == RED) {
+        //判断x父结点是否是x爷爷结点的左节结点
+        if (parentOf(x) == leftOf(parentOf(parentOf(x)))) {
+            //找到爷爷结点的右结点给到y
+            Entry<K,V> y = rightOf(parentOf(parentOf(x)));
+            //如果x的父结点的兄弟结点y是红色，则x的父结点肯定也是红色的
+            if (colorOf(y) == RED) {
+                //父结点和叔结节点都为红色,此时通过变色即可实现平衡
+                //x的父结点设置为黑色
+                setColor(parentOf(x), BLACK);
+                //x的父结点的兄弟结点y也设置成黑色
+                setColor(y, BLACK);
+                //x的爷爷结点设置为红色
+                setColor(parentOf(parentOf(x)), RED);
+                //将x的爷爷结点重置给x
+                x = parentOf(parentOf(x));
+                //如果x的父结点和叔父结点是黑色
+            } else {
+                //如果x是父结点的右结点
+                if (x == rightOf(parentOf(x))) {
+                    //将x的父结点重置给x
+                    x = parentOf(x);
+                    //然后左旋
+                    rotateLeft(x);
+                }
+                //设置x的父结点为黑色
+                setColor(parentOf(x), BLACK);
+                //设置x的爷爷结点为红色
+                setColor(parentOf(parentOf(x)), RED);
+                //将x的爷爷结点右旋
+                rotateRight(parentOf(parentOf(x)));
+            }
+            //x父结点是x爷爷结点的右节结点
+        } else {
+            //找到爷爷结点的左结点给到y
+            Entry<K,V> y = leftOf(parentOf(parentOf(x)));
+            //如果父结点和叔结节点都为红色,此时通过变色即可实现平衡 和上面一样
+            if (colorOf(y) == RED) {
+                setColor(parentOf(x), BLACK);
+                setColor(y, BLACK);
+                setColor(parentOf(parentOf(x)), RED);
+                x = parentOf(parentOf(x));
+                //都为黑
+            } else {
+                //如果x是父结点的左结点
+                if (x == leftOf(parentOf(x))) {
+                    //将父结点重置给x
+                    x = parentOf(x);
+                    //右旋x
+                    rotateRight(x);
+                }
+                //设置x的父结点为黑色
+                setColor(parentOf(x), BLACK);
+                //设置x的爷爷结点为红色
+                setColor(parentOf(parentOf(x)), RED);
+                //左旋爷爷结点
+                rotateLeft(parentOf(parentOf(x)));
+            }
+        }
+    }
+    //根结点一定是黑色
+    root.color = BLACK;
+}
+```
+
+- `设置颜色`、`左右旋`的目的就是保证红黑树的规则
+
+红黑树是一个更高效的检索二叉树，有如下特点：
+
+1. 每个节点只能是红色或者黑色
+2. 根节点永远是黑色的
+3. 每个叶子节点（NIL）是黑色。（注意：这里叶子节点，是指为空(NIL或NULL)的叶子节点！）
+4. 如果一个节点是红色的，则它的子节点必须是黑色的。
+5. 从一个节点到该节点的子孙节点的所有路径上包含相同数目的黑节点
+
+由于红黑树的左右旋等调整过程较复杂，这里不再花大篇幅去解释红黑树的原理。
+
+**左旋**
+
+![img](./images/378912793214.png) 
+
+- 其实就是 P结点为树的结构改变，**将P结点的右结点V作为父结点，将V的左结点给到P结点的右结点，将P结点给到V结点的左结点**，重新变成以V结点为树节点的二叉树
+
+```java
+/** 
+ *  以p为树 左旋
+ */
+private void rotateLeft(Entry<K,V> p) {
+    if (p != null) {
+        //取出P的右结点给r
+        Entry<K,V> r = p.right;
+        //将r的左结点给p的右结点，其实就是p的右结点指向p的右结点的左结点
+        p.right = r.left;
+        //不为空则反过来指向
+        if (r.left != null)
+            r.left.parent = p;
+        //将r的父结点指向p的父结点
+        r.parent = p.parent;
+        //如果p本来就是整个树的根结点，则将r作为根结点
+        if (p.parent == null)
+            root = r;
+        //将r作为此树的根结点
+        else if (p.parent.left == p)
+            //原来p是父结点的左结点  就将r作为p父结点的左结点
+            p.parent.left = r;
+        else
+            p.parent.right = r;
+        //再将r左结点指向p
+        r.left = p;
+        p.parent = r;
+    }
+}
+```
+
+**右旋**
+
+![img](./images/1247091840.png) 
+
+- 其实就是 P结点为树的结构改变，**将P结点的左结点F作为父结点，将F的右结点给到P结点的左结点，将P结点给到F结点的右结点**，重新变成以F结点为树节点的二叉树
+
+```JAVA
+/**
+ * 以p为树 右旋  原理和左旋一样
+ */
+private void rotateRight(Entry<K,V> p) {
+    if (p != null) {
+        Entry<K,V> l = p.left;
+        p.left = l.right;
+        if (l.right != null) l.right.parent = p;
+        l.parent = p.parent;
+        if (p.parent == null)
+            root = l;
+        else if (p.parent.right == p)
+            p.parent.right = l;
+        else p.parent.left = l;
+        l.right = p;
+        p.parent = l;
+    }
+}
+```
+
+
+
+### 6. get 方法
+
+```java
+public V get(Object key) {
+    Entry<K,V> p = getEntry(key);
+    return (p==null ? null : p.value);
+    // 找到返回value，否则返回null
+}
+
+final Entry<K,V> getEntry(Object key) {
+    // Offload comparator-based version for sake of performance
+    //如果comparator不为空，使用comparator的版本获取元素
+    if (comparator != null)
+        //代码和根节点遍历一样
+        return getEntryUsingComparator(key);
+    if (key == null)
+        throw new NullPointerException();
+    @SuppressWarnings("unchecked")
+        //类型转换 就是去实现Comparable
+        Comparable<? super K> k = (Comparable<? super K>) key;
+    //从根节点开始遍历
+    Entry<K,V> p = root;
+    while (p != null) {
+        int cmp = k.compareTo(p.key);
+        //小就从左边找  因为在put的时候满足二叉排序树
+        if (cmp < 0)
+            p = p.left;
+        //大就从右边找
+        else if (cmp > 0)
+            p = p.right;
+        else
+            return p;
+    }
+    return null;
+}
+```
+
+如果 Comparator 不为 null，则执行`getEntryUsingComparator(Object key)`：
+
+![1636878999628](./images/1636878999628.png)
+
+
+
+### 7. remove 方法
+
+![1636879689469](./images/1636879689469.png)
+
+删除节点的时候调用的是 `deleteEntry(Entry<K,V> p) `方法，这个方法主要是删除节点并且平衡红黑树
+
+```java
+/**
+ * Delete node p, and then rebalance the tree.
+ * 删除结点p, 重新平衡树木
+ */
+private void deleteEntry(Entry<K,V> p) {
+    modCount++;
+    size--;
+
+    // If strictly internal, copy successor's element to p and then make p
+    // point to successor.
+    //p结点左右不为空
+    if (p.left != null && p.right != null) {
+        //寻找到p的右结点中最小的结点
+        Entry<K,V> s = successor(p);
+        //将最小结点s的key和vaule给p结点
+        p.key = s.key;
+        p.value = s.value;
+        p = s;
+        // 这种情况实际上并没有删除p节点，而是把p节点的值改了，实际删除的是p的后继节点
+    } // p has 2 children
+
+    // Start fixup at replacement node, if it exists.
+    // 如果原来的当前节点（p）有2个子节点，则当前节点已经变成原来p的右子树中的最小节点了，也就是说其没有左子节点了
+    // 到这一步，p肯定只有一个子节点了
+    //如果当前节点有子节点，则用子节点替换当前节点
+    Entry<K,V> replacement = (p.left != null ? p.left : p.right);
+
+
+    if (replacement != null) {
+        // Link replacement to parent
+        // 把替换节点直接放到当前节点的位置上（相当于删除了p，并把替换节点移动过来了）
+        replacement.parent = p.parent;
+        if (p.parent == null)
+            root = replacement;
+        else if (p == p.parent.left)
+            p.parent.left  = replacement;
+        else
+            p.parent.right = replacement;
+
+        // Null out links so they are OK to use by fixAfterDeletion.
+        // 将p的各项属性都设为空 方便gc
+        p.left = p.right = p.parent = null;
+
+        // Fix replacement
+        // 如果p是黑节点，则需要再平衡
+        if (p.color == BLACK)
+            fixAfterDeletion(replacement);
+    } else if (p.parent == null) { // return if we are the only node.
+        // 如果当前节点就是根节点，则直接将根节点设为空即可
+        root = null;
+    } else { //  No children. Use self as phantom replacement and unlink.
+        // 如果当前节点没有子节点且其为黑节点，则把自己当作虚拟的替换节点进行再平衡
+        if (p.color == BLACK)
+            fixAfterDeletion(p);
+        // 平衡完成后删除当前节点（与父节点断绝关系）
+        if (p.parent != null) {
+            if (p == p.parent.left)
+                p.parent.left = null;
+            else if (p == p.parent.right)
+                p.parent.right = null;
+            p.parent = null;
+        }
+    }
+}
+```
+
+
+
+### 8. 遍历
+
+**TreeMap**遍历是使用 **EntryIterator**这个内部类的
+
+<img src="./images/1636879926237.png" alt="1636879926237" style="zoom:67%;" />
+
+可以发现，EntryIterator 大多的实现都是在父类中：
+
+![1636879980141](./images/1636879980141.png)
+
+接下来看看 PrivateEntryIterator 比较重要的方法：
+
+![1636880051906](./images/1636880051906.png)
+
+进去 successor(e) 方法看看实现： 
+
+> successor 其实就是一个结点的 下一个结点，所谓 下一个，是按次序排序后的下一个结点。从代码中可以看出，如果右子树不为空，就返回右子树中最小结点。如果右子树为空，就要向上回溯了。在这种情况下，t 是以其为根的树的最后一个结点。如果它是其父结点的左孩子，那么父结点就是它的下一个结点，否则，t 就是以其父结点为根的树的最后一个结点，需要再次向上回溯。一直到 ch 是 p 的左孩子为止。
+
+![1636880249932](./images/1636880249932.png)
+
+
+
+### 9. 总结
+
+（1）TreeMap 的存储结构只有一颗红黑树；
+
+（2）TreeMap 中的元素是有序的，按  key的顺序排列；
+
+（3）TreeMap 比 HashMap 要慢一些，因为 HashMap 前面还做了一层桶，寻找元素要快很多；
+
+（4）TreeMap 没有扩容的概念；
+
+（5）TreeMap 可以按范围查找元素，查找最近的元素；
+
+（6）key 不能为 null，为 null 会抛出 NullPointException
+
+（6）如果在构造方法中传递了 Comparator 对象，那么就会以 Comparator 对象的方法进行比较。否则，则使用  Comparable 的 compareTo(To) 方法来比较。 
+
+- 需要说明的是：如果使用的是 compareTo(To) 方法来比较，**key** ⼀定是不能为 **null**，并且得实现了 Comparable 接口的。 
+
+- 即使是传入了 Comparator 对象，不用 compareTo(To) 方法来比较，key 也是不能为 null 的
 
 
 
