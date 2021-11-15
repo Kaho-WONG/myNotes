@@ -1443,6 +1443,20 @@ TreeSet 的类注释：
 
 
 
+## 五、CopyOnWriteArrayList
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Map
 
 ## 一、Map 集合概述
@@ -1533,6 +1547,8 @@ Map 是一种**键-值对（key-value）**集合，Map 集合中的**每一个�
 JDK1.8 之前 HashMap 由 **数组+链表** 组成的，数组是 HashMap 的主体，链表则是主要为了解决哈希冲突而存在的（“拉链法”解决冲突）。 JDK1.8 以后的 HashMap 在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认为 8）（将链表转换成红黑树前会判断，如果当前数组的长度小于 64，那么会选择先进行数组扩容，而不是转换为红黑树）时，将链表转化为红黑树，以减少搜索时间。 
 
 `HashMap` 默认的初始化大小为 16。之后每次扩充，容量变为原来的 2 倍。并且， `HashMap` 总是使用 2 的幂作为哈希表的大小。 
+
+![1636889496356](./images/1636889496356.png)
 
 
 
@@ -1795,7 +1811,7 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
 分为两步
 
 - 扩容：创建一个新的Entry空数组，长度是原数组的2倍。
-- ReHash：遍历原Entry数组，把所有的Entry重新Hash到新数组。
+- ReHash：遍历原Entry数组，把所有的 Entry 重新 Hash 到新数组。
 
 在初始化的时候要调用这个方法，当散列表元素大于 `capacity * load factor` 的时候也是调用 `resize()`。
 
@@ -3916,11 +3932,367 @@ private final void transfer(Node<K, V>[] tab, Node<K, V>[] nextTab) {
 
 
 
+
+
 # 常见面试题
 
 
 
+## Java 中常用的容器有哪些？
 
+常见容器主要包括 `Collection` 和 `Map` 两种，`Collection` 存储着对象的集合，而 `Map` 存储着键值对（两个对象）的映射表 。
+
+**Collection**
+
+- **List** ：存储元素是有序的、可重复的。
+
+1. `ArrayList`：基于**动态数组**实现，支持随机访问。
+2. `Vector`：和 ArrayList 类似，但它是**线程安全**的（这里需要注意：vector的单个操作时原子性的，也就是线程安全的。但是如果两个原子操作复合而来，这个组合的方法是非线程安全的，需要使用锁来保证线程安全）
+3. `LinkedList`：基于**双向链表**实现，只能顺序访问，但是可以快速地在链表中间插入和删除元素。不仅如此，LinkedList 还可以用作栈、队列和双向队列。
+
+- **Queue** ：按特定的排队规则来确定先后顺序，存储的元素是有序的、可重复的。 
+
+1. `LinkedList`：可以用它来实现双向队列。
+2. `PriorityQueue`：基于堆结构实现，可以用它来实现优先队列。
+
+- **Set** ：存储的元素是无序的、不可重复的。 
+
+1. `TreeSet`：基于**红黑树**实现，支持**有序**性操作，例如：根据一个范围查找元素的操作。但是查找效率不如 HashSet，HashSet 查找的时间复杂度为 O(1)，TreeSet 则为 O(logN)。
+2. `HashSet`：基于**哈希表**实现，支持快速查找，但**不支持有序**性操作。并且失去了元素的插入顺序信息，也就是说使用 Iterator 遍历 HashSet 得到的结果是不确定的。
+3. `LinkedHashSet`：具有 HashSet 的查找效率，且内部使用**双向链表**维护元素的插入顺序。
+
+**Map** ：使用键值对（key-value）存储，key 是无序的、不可重复的，value 是无序的、可重复的，每个键最多映射到一个值。 
+
+1. `TreeMap`：基于**红黑树**实现。
+2. `HashMap`：基于**哈希表**实现。
+3. `HashTable`：和 HashMap 类似，但它是**线程安全**的，这意味着同一时刻多个线程可以同时写入 HashTable 并且不会导致数据不一致。它是遗留类，不应该去使用它。现在可以使用 `ConcurrentHashMap` 来支持线程安全，并且 ConcurrentHashMap 的效率会更高，因为 ConcurrentHashMap 引入了分段锁。
+4. `LinkedHashMap`：使用**双向链表**来维护元素的顺序，顺序为插入顺序或者最近最少使用（LRU）顺序。
+
+
+
+## ArrayList 和 LinkedList 的区别？
+
+**ArrayList：**底层是基于**数组**实现的，查找快，增删较慢；
+
+**LinkedList：**底层是基于**双向链表**实现的。确切的说是循环双向链表（JDK1.6 之前是双向循环链表、JDK1.7 之后取消了循环），查找慢、增删快。LinkedList 链表由一系列表项连接而成，一个表项包含 3 个部分：元素内容、前驱表和后驱表。链表内部有一个 header 表项，既是链表的开始也是链表的结尾。header 的后继表项是链表中的第一个元素，header 的前驱表项是链表中的最后一个元素。
+
+> **ArrayList 的增删未必就是比 LinkedList 要慢：**
+>
+> 1. 如果增删都是在末尾来操作【每次调用的都是 remove() 和 add()】，此时 ArrayList 就不需要移动和复制数组来进行操作了。如果数据量有百万级的时，速度是会比 LinkedList 要快的。
+> 2. 如果删除操作的位置是在中间。由于 LinkedList 的消耗主要是在遍历上，ArrayList 的消耗主要是在移动和复制上（底层调用的是 arrayCopy() 方法，是 native 方法）。LinkedList 的遍历速度是要慢于 ArrayList 的复制移动速度的如果数据量有百万级的时，还是 ArrayList 要快。
+
+
+
+## ArrayList 和 Vector 的区别？
+
+**共同点：** 
+
+- 这两个类都实现了 List 接口，它们都是**有序**的集合(存储有序)，底层是**数组**。可以按位置索引号取出某个元素，**允许元素重复**和为**null**。 
+
+**区别：** 
+
+- 同步性： 
+
+  - ArrayList是**非同步**的 
+
+  - Vector是**同步**的 
+
+  > 即便需要同步的时候，我们可以使用 Collections 工具类来构建出同步的 ArrayList 而不用 Vector 
+
+- 扩容大小： 
+  
+  - Vector增长原来的**一倍（×2）**，ArrayList增长原来的 **0.5 倍（×1.5）**
+
+
+
+## Array 和 ArrayList 有何区别？什么时候更适合用 Array？
+
+1. Array 可以容纳基本类型和对象，而 ArrayList 只能容纳对象；
+2. Array 是指定大小的，而 ArrayList 大小是不固定的。
+
+**什么时候更适合使用 Array：**
+
+1. 如果列表的大小已经指定，大部分情况下是存储和遍历它们；
+2. 对于遍历基本数据类型，尽管 Collections 使用自动装箱来减轻编码任务，在指定大小的基本类型的列表上工作也会变得很慢；
+3. 如果你要使用多维数组，使用 \[ ][ ] 比 List 更容易。
+
+
+
+## ArrayList 实现 RandomAccess 接口有何作用？为何 LinkedList 却没实现这个接口？
+
+1. RandomAccess 接口只是一个标志接口，只要 List 集合实现这个接口，就能支持**快速随机访问**。通过查看 Collections 类中的 `binarySearch()` 方法，可以看出，判断 List 是否实现 RandomAccess 接口来实行`indexedBinarySerach(list, key)` 或 `iteratorBinarySerach(list, key)` 方法。再通过查看这两个方法的源码发现：实现 RandomAccess 接口的 List 集合采用一般的 for 循环遍历，而未实现这接口则采用迭代器，即 ArrayList 一般采用 for 循环遍历，而 LinkedList 一般采用迭代器遍历；
+2. ArrayList 用 for 循环遍历比 iterator 迭代器遍历快，LinkedList 用 iterator 迭代器遍历比 for 循环遍历快。所以说，当我们在做项目时，应该考虑到 List 集合的不同子类采用不同的遍历方式，能够提高性能。
+
+
+
+## ArrayList 的扩容机制？
+
+1. 当使用 `add` 方法的时候首先调用 `ensureCapacityInternal` 方法，传入 `size+1` 进去，检查是否需要扩充 `elementData` 数组的大小；
+2. `newCapacity` = 扩充数组为**原来的 1.5 倍**(不能自定义)，如果还不够，就使用它指定要扩充的大小 `minCapacity`，然后判断 `minCapacity` 是否大于 `MAX_ARRAY_SIZE`(Integer.MAX_VALUE – 8) ，如果大于，就取 Integer.MAX_VALUE；
+3. 扩容的主要方法：`grow`；
+4. ArrayList 中 copy 数组的核心就是 `System.arraycopy` 方法，将 original 数组的所有数据复制到 copy 数组中，这是一个本地方法。
+
+
+
+## HashMap 的实现原理/底层数据结构？JDK1.7 和 JDK1.8
+
+**JDK1.7**：Entry数组 + 链表
+
+**JDK1.8**：Node 数组 + 链表/红黑树，**当链表上的元素个数超过 8 个并且数组长度 >= 64 时自动转化成红黑树**，节点变成树节点，以提高搜索效率和插入效率到 **O(logN)**。Entry 和 Node 都包含 key、value、hash、next 属性。
+
+
+
+## HashMap 的 size 为什么必须是 2 的整数次方？
+
+1. 这样做总是能够保证 HashMap 的底层数组长度为 2 的 n 次方。当 length 为 2 的 n 次方时，` index = HashCode（Key） & （Length- 1） ` 就相当于对 length 取模，而且速度比直接取模快得多，这是 HashMap 在速度上的一个优化。而且每次扩容时都是翻倍。
+
+2. 如果 length 为 2 的次幂，则 length – 1 转化为二进制必定是 11111……的形式，在与 hashcode 的二进制进行与操作时效率会非常的快，而且空间不浪费。
+
+   但是，如果 length 不是 2 的次幂，比如：length 为 15，则 length – 1 为 14，对应的二进制为 1110，在和 hashcode 与操作，最后一位都为 0 ，而 0001，0011，0101，1001，1011，0111，1101 这几个位置永远都不能存放元素了，空间浪费相当大，更糟的是这种情况中，数组可以使用的位置比数组长度小了很多，这意味着进一步增加了碰撞的几率，减慢了查询的效率，这样就会造成空间的浪费。
+
+
+
+## HashMap 的 put 方法的执行过程？
+
+当我们想往一个 HashMap 中添加一对 key-value 时，系统首先会计算 key 的 hash 值，然后根据 hash 值确认在 table 中存储的位置。若该位置没有元素，则直接插入。否则迭代该处元素链表并依次比较其 key 的 hash 值。如果两个 hash 值相等且 key 值相等 `(p.hash == hash &&
+((k = p.key) == key || (key != null && key.equals(k))))`，则用新的 Entry 的 value 覆盖原来节点的 value。如果两个 hash 值相等但 key 值不等，则进行插入操作。
+
+不过呢，插入操作在 JDK1.7 和 JDK1.8 是有所不同的，JDK1.7 底层采用数组+链表，插入时采用**头插法**，JDK1.8，底层采用**数组 + 链表 / 红黑树**，并且把头插法改成了**尾插法**，主要是为了减少线程安全的问题，另外，当链表长度大于8，且数组长度大于64时，会把链表转化为红黑树处理，这个时候，就无关是头插还是尾插了，得按照红黑树的规则来插了。
+
+
+
+## HashMap 的 get 方法的执行过程？
+
+通过 key 的 hash 值找到在 table 数组中的索引处的 Entry，然后返回该 key 对应的 value 即可。
+
+在这里能够根据 key 快速的取到 value 除了和 HashMap 的数据结构密不可分外，还和 Entry 有莫大的关系。HashMap 在存储过程中并没有将 key，value 分开来存储，而是当做一个整体 key-value 来处理的，这个整体就是Entry 对象。同时 value 也只相当于 key 的附属而已。在存储的过程中，系统根据 key 的 HashCode 来决定 Entry 在 table 数组中的存储位置，在取的过程中同样根据 key 的 HashCode 取出相对应的 Entry 对象（value 就包含在里面）。
+
+
+
+## HashMap 的 resize 方法的执行过程？
+
+**有两种情况会调用 resize 方法：**
+
+1. 第一次调用 HashMap 的 put 方法时，会调用 resize 方法对 table 数组进行初始化，如果不传入指定值，默认大小为 16 。
+2. 扩容时会调用 resize，即 size > threshold 时，table 数组大小翻倍。
+
+每次扩容之后容量都是**翻倍**。扩容后要将原数组中的所有元素找到在新数组中合适的位置。
+
+当我们把 table[i] 位置的所有 Node 迁移到 newtab 中去的时候：这里面的 node 要么在 newtab 的 i 位置（不变），要么在 newtab 的 i + n 位置。也就是我们可以这样处理：把 table[i] 这个桶中的 node 拆分为两个链表 l1 和 l2：如果  **(e.hash & oldCap) == 0** ，那么当前这个 node 被连接到 l1 链表；否则连接到 l2 链表。这样下来，当遍历完 table[i] 处的所有 node 的时候，我们得到两个链表 l1 和 l2，这时我们令 newtab[i] = l1，newtab[i + n] = l2，这就完成了 table[i] 位置所有 node 的迁移（rehash），这也是 HashMap 中容量一定的是 2 的整数次幂带来的方便之处。
+
+
+
+## JDK1.8之后，为什么 HashMap 头插法改为尾插法？
+
+1. 头插法在并发下有致命问题，就是可能形成**数据环**，get 数据时死循环。
+
+   在 1.8 之前因为处理 hash 冲突的方式是用链表存放数据，使用头插法可以提升一定效率。
+
+   但是在 1.8 之后这个效率提升就可有可无了，链表长度超过 7 就要考虑升级红黑树了，所以哪怕进行尾插遍历次数也会很有限，效率影响不大。
+
+2. 就是因为 1.8 之后数据结构的变动，当链表长度达到阈值，升级为红黑树后头插法就不适用了，因为构建红黑树需要进行比对更新序列，也就不能去说是头插法还是尾插了。
+
+
+
+## HashMap 多线程死循环问题？
+
+详细见下面链接：
+
+https://blog.csdn.net/xuefeng0707/article/details/40797085
+
+https://blog.csdn.net/dgutliangxuan/article/details/78779448
+
+主要是多线程同时 put 时，如果同时触发了 rehash 操作，会导致 HashMap 中的链表中出现循环节点，进而使得后面 get 的时候，会死循环。
+
+
+
+## HashMap 的 get 方法能否判断某个元素是否在 map 中？
+
+HashMap 的 get 函数的返回值不能判断一个 key 是否包含在 map 中，因为 get 返回 null 有可能是不包含该 key，也有可能该 key 对应的 value 为 null。因为 HashMap 中允许 key 为 null，也允许 value 为 null。 
+
+
+
+## HashMap 的 key 值要是为类对象则该类需要满足什么条件？
+
+需要同时重写该类的 **hashCode()** 方法和它的 **equals()** 方法。 
+
+- 从源码可以得知，在插入元素的时候是先算出该对象的 **hashCode**。如果 hashcode 相等的话，那么表明该对象是存储在同一个位置上的。 
+- 如果调用 equals() 方法，两个 **key** 相同，则**替换元素**。
+- 如果调用 equals() 方法，两个 **key** 不相同，则说明该 **hashCode** 仅仅是碰巧相同，此时是散列冲突，将新增的元素放在桶上 。
+
+一般来说，我们会认为：只要两个对象的成员变量的值是相等的，那么我们就认为这两个对象是相等的！因为，Object 底层比较的是两个对象的地址，而对我们开发来说这样的意义并不大~这也就为什么我们要重写 equals() 方法 。
+
+重写了 equals() 方法，就要重写 hashCode() 方法。因为 **equals()** 认定了这两个对象相同，而同⼀个对象调用**hashCode()** 方法时，是应该返回相同的值的！
+
+
+
+## HashMap 与 HashTable 的区别是什么？
+
+**共同点：**
+
+- 从存储结构和实现来讲基本上是相同的，底层都是 **散列表（数组+链表）**
+
+**不同点：**
+
+- 同步性：
+
+  - **HashMap 非同步**（可以通过 `Collections.synchronizedMap(hashMap)`，使其实现同步。 ）
+  - **Hashtable 同步**（但不常使用，而是选择 ConcurrentHashMap）
+
+- 是否允许为 null
+
+  - **HashMap 允许为 null**（一个为 null 的 key 和任意个为 null 的 value；遇到 key 为 null 的时候，调用 putForNullKey 方法进行处理，而对 value 没有处理 ）
+  - **Hashtable 不允许为 null**（key、value 都不能为 null；遇到 null，直接返回 NullPointerException。）
+
+- 默认初始大小和扩容方式
+
+  - HashMap 中 table 大小**默认为 16，扩容为原来 `2倍`**
+  - Hashtable 中 table 大小**默认为 11，扩容方式为 `old * 2 + 1`**
+
+- 哈希值的使用
+
+  - HashMap 得到 hashCode 后需要进行高位运算
+
+  - Hashtable 直接使用对象的 hashCode
+
+  - ```java
+    // HashTable
+    int hash = key.hashCode();
+    ========================
+    // HashMap
+    int  hash =  hash(key)
+    static final int hash(Object key) {
+        int h;
+        return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+    }
+    ```
+
+- 继承
+
+  - HashMap 基于 AbstractMap，AbstractMap 是基于 Map 接口的实现，它以最大限度地减少实现此接口所需的工作。 
+  - Hashtable 基于 Dictionary 类，Dictionary 是任何可将键映射到相应值的类的抽象父类 。
+
+
+
+## HashMap 与 ConcurrentHashMap 的区别是什么?
+
+HashMap 不是线程安全的，而 ConcurrentHashMap 是线程安全的。
+
+ConcurrentHashMap 采用锁分段技术，将整个Hash桶进行了分段segment，也就是将这个大的数组分成了几个小的片段 segment，而且每个小的片段 segment 上面都有锁存在，那么在插入元素的时候就需要先找到应该插入到哪一个片段 segment，然后再在这个片段上面进行插入，而且这里还需要获取 segment 锁，这样做明显减小了锁的粒度。
+
+
+
+## HashTable 和 ConcurrentHashMap 的区别？
+
+- **底层数据结构：** JDK1.7 的 `ConcurrentHashMap` 底层采用 **分段的数组+链表** 实现，JDK1.8 采用的数据结构跟 `HashMap1.8` 的结构一样，**数组+链表/红黑二叉树**。`Hashtable` 和 JDK1.8 之前的 `HashMap` 的底层数据结构类似都是采用 **数组+链表** 的形式，数组是 HashMap 的主体，链表则是主要为了解决哈希冲突而存在的；
+
+- **实现线程安全的方式（重要）：**Hashtable 是在每个方法上都加上了 **Synchronized** 来实现同步，效率低下。ConcurrentHashMap 通过**部分加锁**和利用 **CAS 算法**来实现同步。
+
+HashTable 和 ConcurrentHashMap 相比，效率低：
+
+ ① **在 JDK1.7 的时候，`ConcurrentHashMap`（分段锁）** 对整个桶数组进行了分割分段(`Segment`)，每一把锁只锁容器其中一部分数据，多线程访问容器里不同数据段的数据，就不会存在锁竞争，提高并发访问率。
+
+**到了 JDK1.8 的时候已经摒弃了 `Segment` 的概念，而是直接用 `Node` 数组+链表+红黑树的数据结构来实现，并发控制使用 `synchronized` 和 CAS 来操作。（JDK1.6 以后 对 `synchronized` 锁做了很多优化）** 整个看起来就像是优化过且线程安全的 `HashMap`，虽然在 JDK1.8 中还能看到 `Segment` 的数据结构，但是已经简化了属性，只是为了兼容旧版本；
+
+② **`Hashtable`(同一把锁)** :使用 `synchronized` 来保证线程安全，效率非常低下。当一个线程访问同步方法时，其他线程也访问同步方法，可能会进入阻塞或轮询状态，如使用 put 添加元素，另一个线程不能使用 put 添加元素，也不能使用 get，竞争会越来越激烈效率越低。 
+
+**两者的对比图：**
+
+**Hashtable：**
+
+![1636969034951](./images/1636969034951.png)
+
+**JDK1.7 的 ConcurrentHashMap：**
+
+![1636969148775](./images/1636969148775.png)
+
+**JDK1.8 的 ConcurrentHashMap：**
+
+![1636889496356](./images/1636889496356.png)
+
+> JDK1.8 的 `ConcurrentHashMap` 不再是 **Segment 数组 + HashEntry 数组 + 链表**，而是 **Node 数组 + 链表 / 红黑树**。不过，Node 只能用于链表的情况，红黑树的情况需要使用 **`TreeNode`**。当冲突链表达到一定长度时，链表会转换成红黑树。 
+
+
+
+## ConcurrentHashMap 的实现原理是什么？
+
+JDK 7：中 ConcurrentHashMap 采用了**数组 + Segment + 分段锁**的方式实现。
+
+JDK 8：中 ConcurrentHashMap 参考了 JDK 8 HashMap 的实现，采用了**数组 + 链表 + 红黑树**的实现方式来设计，内部大量采用 **CAS 操作**。
+
+ConcurrentHashMap 采用了非常精妙的”分段锁”策略，ConcurrentHashMap 的主干是个 Segment 数组。
+
+```java
+final  Segment<K,V>[]  segments;
+```
+
+Segment 继承了 ReentrantLock，所以它就是一种可重入锁（ReentrantLock)。在 ConcurrentHashMap，一个 Segment 就是一个子哈希表，Segment 里维护了一个 HashEntry 数组，并发环境下，对于不同 Segment 的数据进行操作是不用考虑锁竞争的。就按默认的 ConcurrentLevel 为 16 来讲，理论上就允许 16 个线程并发执行。
+
+所以，**对于同一个 Segment 的操作才需考虑线程同步，不同的 Segment 则无需考虑。**Segment 类似于 HashMap，一个 Segment 维护着一个HashEntry 数组：
+
+```java
+transient  volatile  HashEntry<K,V>[]  table;
+```
+
+HashEntry 是目前我们提到的最小的逻辑处理单元了。一个 ConcurrentHashMap 维护一个 Segment 数组，一个 Segment 维护一个 HashEntry 数组。因此，ConcurrentHashMap 定位一个元素的过程需要进行两次 Hash 操作。第一次 Hash 定位到 Segment，第二次 Hash 定位到元素所在的链表的头部。
+
+
+
+## HashSet 的实现原理？
+
+HashSet 的实现是依赖于 HashMap 的，HashSet 的值都是存储在 HashMap 中的。在 HashSet 的构造方法中会初始化一个 HashMap 对象，HashSet 不允许值重复。因为 HashSet 的值是作为 HashMap 的 key 存储在 HashMap 中的，当存储的值已经存在时返回 false。 
+
+
+
+## HashSet 怎么保证元素不重复的？
+
+```java
+public boolean add(E e) {
+    return map.put(e, PRESENT)==null;
+ }
+```
+
+**元素值作为的是 map 的 key，map 的 value 则是 PRESENT 变量**，这个变量只作为放入 map 时的一个占位符而存在，所以没什么实际用处。HashMap 的 key 是不能重复的，而这里HashSet 的元素又是作为了 map 的 key，当然也不能重复了。 
+
+
+
+## LinkedHashMap 的实现原理?
+
+LinkedHashMap 也是基于 HashMap 实现的，不同的是它定义了一个 Entry header，这个 header 不是放在 Table 里，它是额外独立出来的。LinkedHashMap 通过继承 hashMap 中的 Entry，并添加两个属性 Entry before、after 和 header 结合起来组成一个双向链表，来实现按插入顺序或访问顺序排序。
+
+LinkedHashMap 定义了排序模式 accessOrder，该属性为 boolean 型变量，对于访问顺序，为 true；对于插入顺序，则为 false。一般情况下，不必指定排序模式，其迭代顺序即为默认为插入顺序。 
+
+
+
+## Iterator 怎么使用？有什么特点？
+
+迭代器是一种设计模式，它是一个对象，它可以遍历并选择序列中的对象，而开发人员不需要了解该序列的底层结构。迭代器通常被称为“轻量级”对象，因为创建它的代价小。Java 中的 Iterator 功能比较简单，并且只能单向移动：　　
+
+1. 使用方法 iterator() 要求容器返回一个 Iterator。第一次调用 Iterator 的 next() 方法时，它返回序列的第一个元素。
+
+   注意：iterator() 方法是 java.lang.Iterable 接口，被 Collection 继承。　　
+
+2. 使用 next() 获得序列中的下一个元素。　
+
+3. 使用 hasNext() 检查序列中是否还有元素。　　
+
+4. 使用 remove() 将迭代器新返回的元素删除。　
+
+
+
+## Iterator 和 ListIterator 有什么区别？
+
+Iterator 可用来遍历 Set 和 List 集合，但是 ListIterator 只能用来遍历 List。Iterator 对集合只能是前向遍历，ListIterator 既可以前向也可以后向。ListIterator 实现了 Iterator 接口，并包含其他的功能，比如：增加元素，替换元素，获取前一个和后一个元素的索引等等。 
+
+
+
+## Iterator 和 Enumeration 接口的区别？
+
+与 Enumeration 相比，Iterator 更加安全，因为当一个集合正在被遍历的时候，它会阻止其它线程去修改集合。否则会抛出 ConcurrentModificationException 异常。这其实就是 fail-fast 机制。具体区别有三点：
+
+1. Iterator 的方法名比 Enumeration 更科学；
+2. Iterator 有 fail-fast 机制，比 Enumeration 更安全；
+3. Iterator 能够删除元素，Enumeration 并不能删除元素。
 
 
 
@@ -3942,5 +4314,78 @@ private final void transfer(Node<K, V>[] tab, Node<K, V>[] nextTab) {
 
 
 
+## 什么是 fail-safe？
+
+fail-safe（安全失败）采用安全失败机制的集合容器，在遍历时不是直接在集合内容上访问的，而是先复制原有集合内容，在拷贝的集合上进行遍历。 
+
+**原理：**由于迭代时是对原集合的拷贝进行遍历，所以在遍历过程中对原集合所作的修改并不能被迭代器检测到，所以不会触发Concurrent Modification Exception。
+
+**缺点：**基于拷贝内容的优点是避免了ConcurrentModificationException，但同样地，迭代器并不能访问到修改后的内容，即：**迭代器遍历的是开始遍历那一刻拿到的集合拷贝，在遍历期间原集合发生的修改迭代器是不知道的。**
+
+**场景：**java.util.concurrent 包下的容器都是安全失败，可以在多线程下并发使用，并发修改。
 
 
+
+## fail-fast 和 fail-safe 有什么区别？
+
+java.util 包下面的所有的集合类都是快速失败的，而 java.util.concurrent 包下面的所有的类都是安全失败的。fail-fast（快速失败）的迭代器会抛出 ConcurrentModificationException 异常，而因为 fail-safe（安全失败）是基于对底层集合做拷贝，所以，它不受源集合上修改的影响，安全失败的迭代器永远不会抛出这样的异常。
+
+
+
+## Collection 和 Collections 有什么区别？
+
+**Collection：**是最基本的集合接口，一个 Collection 代表一组 Object，即 Collection 的元素。它的直接继承接口有 List，Set 和 Queue。
+
+**Collections：**是不属于 Java 的集合框架的，它是集合类的一个**工具类/帮助类**。此类不能被实例化， 服务于 Java 的 Collection 框架。它包含有关集合操作的静态多态方法，实现对各种集合的搜索、排序、线程安全等操作。
+
+
+
+## 并发集合类是什么？
+
+Java1.5并发包（java.util.concurrent）包含线程安全集合类，允许在迭代时修改集合。 
+
+- Utils 包下的集合迭代器被设计为 fail-fast 的，会抛出 ConcurrentModificationException，但 java.util.concurrent 的并不会。
+- 一部分类为： 
+  - CopyOnWriteArrayList 
+  - ConcurrentHashMap 
+  - CopyOnWriteArraySet
+
+
+
+## 同步控制
+
+`Collections` 提供了多个`synchronizedXxx()`方法·，该方法可以将指定集合包装成线程同步的集合，从而解决多线程并发访问集合时的线程安全问题。
+
+我们知道 `HashSet`，`TreeSet`，`ArrayList`,`LinkedList`,`HashMap`,`TreeMap` 都是线程不安全的。`Collections` 提供了多个静态方法可以把他们包装成线程同步的集合。
+
+**最好不要用下面这些方法，效率非常低，需要线程安全的集合类型时请考虑使用 JUC 包下的并发集合。**
+
+方法如下：
+
+```java
+synchronizedCollection(Collection<T>  c) //返回指定 collection 支持的同步（线程安全的）collection。
+synchronizedList(List<T> list)//返回指定列表支持的同步（线程安全的）List。
+synchronizedMap(Map<K,V> m) //返回由指定映射支持的同步（线程安全的）Map。
+synchronizedSet(Set<T> s) //返回指定 set 支持的同步（线程安全的）set。
+```
+
+
+
+## 与 Java 集合框架相关的有哪些好的实践？
+
+1. 根据需要确定集合的类型。如果是单列的集合，我们考虑用 Collection 下的子接口 ArrayList 和 Set。如果是映射，我们就考虑使用 Map。 
+
+2. 确定完我们的集合类型，我们接下来确定使用该集合类型下的哪个子类~我认为可以简单分成几个步骤： 
+
+- 是否需要同步 
+  - 去找线程安全的集合类使用
+- 迭代时是否需要有序(插入顺序有序) 
+  - 去找 Linked 双向列表结构的 
+- 是否需要排序(自然顺序或者定制排序) 
+  - 去找Tree红黑树类型的（JDK1.8） 
+
+3. 估算存放集合的数据量有多大，无论是 List 还是 Map，它们实现动态增长，都是有性能消耗的。在初始化集合的时候给出⼀个合理的容量会减少动态增长时的消耗~。
+
+4. 使用泛型，避免在运行时出现 ClassCastException 
+
+5. 尽可能使用 Collections 工具类，或者获取只读、同步或空的集合，而非编写自己的实现。它将会提供代码重用性，它有着更好的稳定性和可维护性。
