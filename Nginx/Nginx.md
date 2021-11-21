@@ -449,7 +449,7 @@ http 全局块配置的指令包括文件引入、MIME-TYPE 定义、日志自�
 
 > 可以直接将准备好的 tomcat 安装文件压缩包放到 linux 系统中 `/usr/src/` 目录下，通过命令 `tar -xvf apache-tomcat-7.0.70.tar.gz` 解压。
 >
-> 解压后进入 tomcat 的 bin 目录中，执行 `./startup` 启动 tomcat 服务器。
+> 解压后进入 tomcat 的 bin 目录中，执行 `./startup.sh` 启动 tomcat 服务器。
 >
 > 注意：运行 tomcat 需要有 jdk 环境。
 
@@ -538,11 +538,11 @@ firewall-cmd --list-all
 
 使用 nginx 反向代理，根据访问的路径跳转到不同端口的服务中。
 
-nginx 监听端口为 9001：
+nginx 监听端口为 `9001`：
 
-访问 `http://192.168.17.129:9001/edu/` 直接跳转到 `127.0.0.1:8080` 
+访问 `http://192.168.200.130:9001/edu/` 直接跳转到 `127.0.0.1:8080` 
 
-访问 `http://192.168.17.129:9001/vod/` 直接跳转到 `127.0.0.1:8081` 
+访问 `http://192.168.200.130:9001/vod/` 直接跳转到 `127.0.0.1:8081` 
 
 
 
@@ -550,17 +550,67 @@ nginx 监听端口为 9001：
 
 （1）准备两个 tomcat 服务器，一个监听 8080 端口，一个监听 8081 端口。
 
+在 `/usr/src/` 文件夹下建立两个文件夹 `tomact8080` 和 `tomcat8081` 分别放置两个 tomcat 服务器。
+
+![1637470848147](./imgs/1637470848147.png)
+
+把之前准备好的 tomcat 安装文件压缩包分别放置进这两个文件夹，再执行命令 `tar -xvf apache-tomcat-7.0.70.tar.gz` 解压。
+
+> 注意：需要进入 tomcat 安装目录下的配置文件 `server.xml` 中修改其中一个 tomcat 的端口号为8081，同时还有几个其他端口号也要修改成与另一个 tomcat 服务器不同的端口号。
+
+修改完成后分别使用 `./startup.sh` 启动两个 tomcat 服务器。
+
+（2）创建文件夹和测试页面
+
+在两个服务器文件夹中的 webapps 文件夹中分别建立两个文件夹 `/vod/` 和 `/edu/`，分别在里面加入一个不同的页面 html 文件，以便测试。
 
 
 
+### 5.2.3 具体配置
+
+#### （1）在 nginx 进行请求转发的配置（反向代理配置）
+
+找到 nginx 的配置文件（`/usr/local/nginx/conf/nginx.conf`），在其中进行如下配置：
+
+添加一个 server 块：
+
+![1637471994427](D:\CodeLearning\ComputerScience\MyNote-git\Nginx\imgs\1637471994427.png)
+
+#### （2）开放对外访问的端口号
+
+```shell
+firewall-cmd --add-port=9001/tcp --permanent
+firewall-cmd --add-port=8080/tcp --permanent
+firewall-cmd --add-port=8081/tcp --permanent
+```
+
+> **注意：修改完配置文件后需要进入 nginx 的 sbin 目录中 `cd /usr/local/nginx/sbin` 执行重新加载 nginx 的命令 `./nginx -s reload`。**
+
+#### （3）最终测试
+
+![1637472283583](./imgs/1637472283583.png)
+
+![1637472500245](./imgs/1637472500245.png)
 
 
 
+### 5.2.4 location 指令说明
 
+该指令用于匹配 URL。 
 
+语法如下：
 
+![1637472650949](./imgs/1637472650949.png)
 
+ 1、`=` ：用于不含正则表达式的 uri 前，要求请求字符串与 uri 严格匹配，如果匹配成功，就停止继续向下搜索并立即处理该请求。 
 
+ 2、`~`：用于表示 uri 包含正则表达式，并且区分大小写。 
+
+ 3、`~*`：用于表示 uri 包含正则表达式，并且不区分大小写。 
+
+ 4、`^~`：用于不含正则表达式的 uri 前，要求 Nginx 服务器找到标识 uri 和请求字符串匹配度最高的 location 后，立即使用此 location 处理请求，而不再使用 location 块中的正则 uri 和请求字符串做匹配。 
+
+> 注意：如果 uri 包含正则表达式，则必须要有 ~ 或者 ~* 标识。 
 
 
 
