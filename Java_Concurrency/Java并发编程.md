@@ -1191,6 +1191,8 @@ public class Concurrency {
 
 下面代码清单所示的代码摘自 `java.lang.Thread` 中对线程进行初始化的部分：
 
+Thread.java：
+
 ![1637844537502](./imgs/1637844537502.png)
 
 ![1637844609192](./imgs/1637844609192.png)
@@ -1201,17 +1203,258 @@ public class Concurrency {
 
 ### 4.2.2 启动线程
 
+线程对象在初始化完成之后，调用 `start()` 方法就可以启动这个线程。线程 `start()` 方法的含义是：**当前线程（即 parent 线程）同步告知 Java 虚拟机，只要线程规划器空闲，应立即启动调用 `start()` 方法的线程。**
+
+> 注意：**启动一个线程前，最好为这个线程设置线程名称**，因为这样在使用 jstack 分析程序或者进行问题排查时，就会给开发人员提供一些提示。
 
 
 
+### 4.2.3 理解中断
+
+中断可以理解为**线程的一个标识位属性**，它表示**一个运行中的线程是否被其他线程进行了中断操作。**中断好比其他线程对该线程打了个招呼，其他线程通过调用该线程的 `interrupt()` 方法对其进行中断操作。 
+
+线程通过检查自身是否被中断来进行响应，线程通过方法 `isInterrupted()`来进行判断是否被中断，也可以调用静态方法 `Thread.interrupted()`对当前线程的中断标识位进行复位。如果该线程已经处于终结状态，即使该线程被中断过，在调用该线程对象的 `isInterrupted()`时依旧会返回 false。 
+
+从 Java 的 API 中可以看到，许多声明抛出 InterruptedException 的方法（例如 `Thread.sleep(longmillis)`方法）这些方法**在抛出 InterruptedException 之前，Java 虚拟机会先将该线程的中断标识位清除**，然后抛出 InterruptedException，此时调用 `isInterrupted()` 方法将会返回 false。
+
+***
+
+在下面代码清单所示的例子中，首先创建了两个线程，SleepThread 和 BusyThread，前者不停地睡眠，后者一直运行，然后对这两个线程分别进行中断操作，观察二者的中断标识位。 
+
+Concurrency.java：
+
+```java
+public class Concurrency {
+    public static void main(String[] args) throws Exception {
+        // sleepThread 不停的尝试睡眠
+        Thread sleepThread = new Thread(new SleepRunner(), "SleepThread");
+        sleepThread.setDaemon(true);
+        // busyThread 不停的运行
+        Thread busyThread = new Thread(new BusyRunner(), "BusyThread");
+        busyThread.setDaemon(true);
+        sleepThread.start();
+        busyThread.start();
+        
+        // 休眠 5 秒，让 sleepThread 和 busyThread 充分运行
+        TimeUnit.SECONDS.sleep(5);
+        sleepThread.interrupt();
+        busyThread.interrupt();
+        System.out.println("SleepThread interrupted is " + sleepThread.isInterrupted());
+        System.out.println("BusyThread interrupted is " + busyThread.isInterrupted());
+
+        // 防止 sleepThread 和 busyThread 立刻退出
+        TimeUnit.SECONDS.sleep(2);
+    }
+    static class SleepRunner implements Runnable {
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                	TimeUnit.SECONDS.sleep(10);
+                } catch (InterruptedException e) {
+                	e.printStackTrace();
+                }
+            }
+        }
+    }
+    static class BusyRunner implements Runnable {
+        @Override
+        public void run() {
+            while (true) {
+            }
+        }
+    } 
+}
+```
+
+输出如下。 
+
+```
+SleepThread interrupted is false 
+BusyThread interrupted is true 
+java.lang.InterruptedException: sleep interrupted
+```
+
+从结果可以看出，抛出 InterruptedException 的线程 SleepThread，其中断标识位被清除了，而一直忙碌运作的线程 BusyThread，中断标识位没有被清除。
 
 
 
+### 4.2.4 过期的 suspend()、resume() 和 stop()【已淘汰】
+
+如果把 CD 机播放音乐比作一个线程的运作，那么对音乐播放做出的暂停、恢复和停止操作对应在线程 Thread 的 API 就是 `suspend()`、`resume()` 和 `stop()`。 
 
 
 
+在下面代码清单所示的例子中，创建了一个线程 PrintThread，它以 1 秒的频率进行打印，而主线程对其进行暂停、恢复和停止操作。
+
+Concurrency.java：
+
+```java
+public class Concurrency {
+    public static void main(String[] args) throws Exception {
+        DateFormat format = new SimpleDateFormat("HH:mm:ss");
+        Thread printThread = new Thread(new Runner(), "PrintThread");
+        printThread.setDaemon(true);
+        printThread.start();
+        TimeUnit.SECONDS.sleep(3);
+        // 将 PrintThread 进行暂停，输出内容工作停止
+        printThread.suspend();
+        System.out.println("main suspend PrintThread at " + format.format(new Date()));
+        TimeUnit.SECONDS.sleep(3);
+        // 将 PrintThread 进行恢复，输出内容继续
+        printThread.resume();
+        System.out.println("main resume PrintThread at " + format.format(new Date()));
+        TimeUnit.SECONDS.sleep(3);
+        // 将 PrintThread 进行终止，输出内容停止
+        printThread.stop();
+        System.out.println("main stop PrintThread at " + format.format(new Date()));
+        TimeUnit.SECONDS.sleep(3);
+    }
+    
+    static class Runner implements Runnable {
+        @Override
+        public void run() {
+            DateFormat format = new SimpleDateFormat("HH:mm:ss");
+            while (true) {
+            	System.out.println(Thread.currentThread().getName() + " Run at " + format.format(new Date()));
+            	SleepUtils.second(1);
+            }
+        }
+    } 
+}
+```
+
+输出如下（输出内容中的时间与示例执行的具体时间相关）：
+
+```
+PrintThread Run at 11:21:06 
+PrintThread Run at 11:21:07 
+PrintThread Run at 11:21:08 
+main suspend PrintThread at 11:21:09 
+main resume PrintThread at 11:21:12 
+PrintThread Run at 11:21:12 
+PrintThread Run at 11:21:13 
+PrintThread Run at 11:21:14 
+main stop PrintThread at 11:21:15 
+```
+
+在执行过程中，PrintThread 运行了 3 秒，随后被暂停，3 秒后恢复，最后经过 3 秒被终止。
+
+>这些 API 是过期的，也就是**不建议使用**的。 
+>
+>不建议使用的原因主要有：以 suspend()方法为例，在调用后，线程不会释放已经占有的资源（比如锁），而是占有着资源进入睡眠状态，这样容易引发死锁问题。同样，stop()方法在终结一个线程时不会保证线程的资源正常释放，通常是没有给予线程完成资源释放工作的机会，因此会导致程序可能工作在不确定状态下。 
+>
+>暂停和恢复操作可以用后面提到的等待/通知机制来替代。
 
 
+
+### 4.2.5 安全地终止线程
+
+中断状态是线程的一个标识位，而**中断操作**是一种简便的线程间交互方式，而这种交互方式最适合**用来取消或停止任务。**除了中断以外，还可以利用一个 boolean 变量来控制是否需要停止任务并终止该线程。 
+
+
+
+在下面代码清单所示的例子中，创建了一个线程 CountThread，它不断地进行变量累加，而主线程尝试对其进行中断操作和停止操作。
+
+Shutdown.java：
+
+```java
+public class Concurrency {
+    public static void main(String[] args) throws Exception {
+        Runner one = new Runner();
+        Thread countThread = new Thread(one, "CountThread");
+        countThread.start();
+        // 睡眠 1 秒，main 线程对 CountThread 进行中断，使 CountThread 能够感知中断而结束
+        TimeUnit.SECONDS.sleep(1);
+        countThread.interrupt();// 中断
+        Runner two = new Runner();
+        countThread = new Thread(two, "CountThread");
+        countThread.start();
+        // 睡眠 1 秒，main 线程对 Runner two 进行取消，使 CountThread 能够感知 on 为 false 而结束
+        TimeUnit.SECONDS.sleep(1);
+        two.cancel();// 取消/停止
+    }
+    
+    private static class Runner implements Runnable {
+        private long i;
+        private volatile boolean on = true;
+        
+        @Override
+        public void run() {
+            while (on && !Thread.currentThread().isInterrupted()) {
+            	i++;
+            }
+            System.out.println("Count i = " + i);
+        }
+        
+        public void cancel() {
+        	on = false;
+        }
+    } 
+}
+```
+
+输出结果如下所示（输出内容可能不同）。 
+
+```
+Count i = 1161971632 
+Count i = 1173815036
+```
+
+示例在执行过程中，main 线程通过**中断操作**和 **cancel()**方法均可使 CountThread 得以终止。这种**通过标识位或者中断操作的方式能够使线程在终止时有机会去清理资源，而不是武断地将线程停止**，因此这种终止线程的做法显得更加安全和优雅。
+
+
+
+## 4.3 线程间通信
+
+
+
+### 4.3.1 volatile 和 synchronized 关键字
+
+Java 支持多个线程同时访问一个对象或者对象的成员变量，由于每个线程可以拥有这个变量的拷贝（虽然对象以及成员变量分配的内存是在共享内存中的，但是每个执行的线程还是可以拥有一份拷贝，这样做的目的是加速程序的执行，这是现代多核处理器的一个显著特性），所以**程序在执行过程中，一个线程看到的变量并不一定是最新的。**
+
+- **关键字 `volatile` 可以用来修饰`字段（成员变量）`，就是告知程序任何对该变量的访问均需要从共享内存中获取，而对它的改变必须同步刷新回共享内存，它能保证所有线程对变量访问的可见性。**
+
+- **关键字 `synchronized` 可以修饰`方法`或者以`同步块`的形式来进行使用，它主要确保多个线程在同一个时刻，只能有一个线程处于方法或者同步块中，它保证了线程对变量访问的可见性和排他性。** 
+
+
+
+对于**同步块**的实现是使用 `monitorenter` 和 `monitorexit` 指令，而**同步方法**则是依靠方法修饰符上的 `ACC_SYNCHRONIZED` 来完成的。无论采用哪种方式，其本质是对一个**`对象的监视器（monitor）`**进行获取，而这个获取过程是**排他**的，也就是**同一时刻只能有一个线程获取到由 synchronized 所保护对象的监视器。** 
+
+**任意一个对象都拥有自己的监视器，当这个对象由同步块或者这个对象的同步方法调用时，执行方法的线程必须先获取到该对象的监视器才能进入同步块或者同步方法，而没有获取到监视器（执行该方法）的线程将会被阻塞在同步块和同步方法的入口处，进入 BLOCKED 状态。**
+
+下图描述了对象、对象的监视器、同步队列和执行线程之间的关系：
+
+![1637915743696](./imgs/1637915743696.png)
+
+任意线程对 Object（Object 由 synchronized 保护）的访问，首先要获得 Object 的监视器。如果获取失败，线程进入同步队列，线程状态变为 BLOCKED。当访问 Object 的前驱（获得了锁的线程）释放了锁，则该释放操作唤醒阻塞在同步队列中的线程，使其重新尝试对监视器的获取。 
+
+
+
+### 4.3.2 等待/通知机制
+
+一个线程修改了一个对象的值，而另一个线程感知到了变化，然后进行相应的操作，整个过程开始于一个线程，而最终执行又是另一个线程。前者是生产者，后者就是消费者，这种模式隔离了“做什么”（what）和“怎么做”（How），在功能层面上实现了解耦，体系结构上具备了良好的伸缩性，但是在 Java 语言中如何实现类似的功能呢？ 
+
+简单的办法是让消费者线程不断地循环检查变量是否符合预期，如下面代码所示，在 while 循环中设置不满足的条件，如果条件满足则退出 while 循环，从而完成消费者的工作。 
+
+```java
+while(value!=desire){
+	Thread.sleep(1000);
+}
+doSomething();
+```
+
+上面这段伪代码在条件不满足时就睡眠一段时间，这样做的目的是防止过快的“无效”尝试，这种方式看似能够解实现所需的功能，但是却存在如下问题：
+
+1. **难以确保及时性。**在睡眠时，基本不消耗处理器资源，但是如果睡得过久，就不能及时发现条件已经变化，也就是及时性难以保证。 
+
+2. **难以降低开销。**如果降低睡眠的时间，比如休眠 1 毫秒，这样消费者能更加迅速地发现条件变化，但是却可能消耗更多的处理器资源，造成了无端的浪费。
+
+以上两个问题，看似矛盾难以调和，但是 Java 通过**内置的等待/通知机制**能够很好地解决这个矛盾并实现所需的功能。 
+
+等待/通知的相关方法是任意 Java 对象都具备的，因为这些方法被定义在所有对象的超类 java.lang.Object 上，方法和描述如下表所示：
+
+![1637917668188](./imgs/1637917668188.png)
 
 
 
