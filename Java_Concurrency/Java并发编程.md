@@ -1433,7 +1433,7 @@ Java 支持多个线程同时访问一个对象或者对象的成员变量，由
 
 ### 4.3.2 等待/通知机制
 
-一个线程修改了一个对象的值，而另一个线程感知到了变化，然后进行相应的操作，整个过程开始于一个线程，而最终执行又是另一个线程。前者是生产者，后者就是消费者，这种模式隔离了“做什么”（what）和“怎么做”（How），在功能层面上实现了解耦，体系结构上具备了良好的伸缩性，但是在 Java 语言中如何实现类似的功能呢？ 
+> 一个线程修改了一个对象的值，而另一个线程感知到了变化，然后进行相应的操作，整个过程开始于一个线程，而最终执行又是另一个线程。前者是生产者，后者就是消费者，这种模式隔离了“做什么”（what）和“怎么做”（How），在功能层面上实现了解耦，体系结构上具备了良好的伸缩性，但是在 Java 语言中如何实现类似的功能呢？ 
 
 简单的办法是让消费者线程不断地循环检查变量是否符合预期，如下面代码所示，在 while 循环中设置不满足的条件，如果条件满足则退出 while 循环，从而完成消费者的工作。 
 
@@ -1455,6 +1455,367 @@ doSomething();
 等待/通知的相关方法是任意 Java 对象都具备的，因为这些方法被定义在所有对象的超类 java.lang.Object 上，方法和描述如下表所示：
 
 ![1637917668188](./imgs/1637917668188.png)
+
+**等待/通知机制，是指一个线程 A 调用了对象 O 的 `wait()` 方法进入等待状态，而另一个线程 B 调用了对象 O 的 `notify()` 或者 `notifyAll()` 方法，线程 A 收到通知后从对象 O 的 wait()方法返回，进而执行后续操作。**上述两个线程通过对象 O 来完成交互，而对象上的 `wait()` 和 `notify`/`notifyAll()` 的关系就如同开关信号一样，用来完成等待方和通知方之间的交互工作。 
+
+***
+
+在下面代码清单所示的例子中，创建了两个线程——`WaitThread` 和 `NotifyThread`，前者检查 flag 值是否为 false，如果符合要求，进行后续操作，否则在 lock 上等待，后者在睡眠了一段时间后对 lock 进行通知。
+
+![1637918456498](./imgs/1637918456498.png)
+
+输出如下（输出内容可能不同，主要区别在时间上）：
+
+```
+Thread[WaitThread,5,main] flag is true. wa @ 13: 44: 41  
+Thread[NotifyThread,5,main] hold lock. notify @ 13: 44: 42  
+Thread[NotifyThread,5,main] hold lock again. sleep @ 13: 44: 47  
+Thread[WaitThread,5,main] flag is false. running @ 13: 44: 52
+```
+
+上述第 3 行和第 4 行输出的顺序可能会互换，而上述例子主要说明了调用 `wait()`、`notify()` 以及 `notifyAll()` 时需要注意的细节如下：
+
+1. 使用 `wait()`、`notify()` 和 `notifyAll()` 时需要先对调用对象加锁。 
+
+2. 调用 `wait()` 方法后，线程状态由 RUNNING 变为 WAITING，并将当前线程放置到对象的等待队列。 
+
+3. **`notify()` 或 `notifyAll()` 方法调用后，等待线程依旧不会从 `wait()` 返回，需要调用 `notify()` 或 `notifyAll()`的线程释放锁之后，等待线程才有机会从 `wait()` 返回。** 
+
+4. `notify()` 方法**将等待队列中的一个等待线程从等待队列中移到同步队列中**，而 `notifyAll()` 方法则是将等待队列中所有的线程全部移到同步队列，被移动的线程状态由 WAITING 变为 BLOCKED。 
+
+5. 从 `wait()` 方法返回的**前提是获得了调用对象的锁**。
+
+>等待/通知机制依托于**同步机制**，其目的就是**确保等待线程从 `wait()` 方法返回时能够感知到通知线程对变量做出的修改。** 
+
+
+
+下图描述了上述示例的过程：
+
+![1637924163767](./imgs/1637924163767.png)
+
+WaitThread 首先获取了对象的锁，然后调用对象的 `wait()` 方法，从而放弃了锁并进入了对象的等待队列 WaitQueue 中，进入等待状态。由于 WaitThread 释放了对象的锁， NotifyThread 随后获取了对象的锁，并调用对象的 `notify()` 方法，将 WaitThread 从 WaitQueue 移到 SynchronizedQueue 中，此时 WaitThread 的状态变为阻塞状态。NotifyThread 释放了锁之后， WaitThread 再次获取到锁并从 `wait()` 方法返回继续执行。
+
+
+
+### 4.3.3 等待/通知的经典范式
+
+等待/通知的经典范式分为两部分，分别针对**等待方（消费者）**和**通知方（生产者）**。
+
+- **等待方遵循如下原则:**
+  1. 获取对象的锁。 
+  2. 如果条件不满足，那么调用对象的 `wait()` 方法，被通知后仍要检查条件。 
+  3. 条件满足则执行对应的逻辑。 
+
+对应的伪代码如下：
+
+```java
+synchronized(对象) {
+    while(条件不满足) { 
+    对象.wait();
+    }
+    对应的处理逻辑
+}
+```
+
+- **通知方遵循如下原则:**
+  1. 获得对象的锁。 
+  2. 改变条件。 
+  3. 通知所有等待在对象上的线程。 
+
+对应的伪代码如下：
+
+```java
+synchronized(对象){
+    改变条件
+    对象.notifyAll();
+}
+```
+
+
+
+### 4.3.4 管道输入/输出流
+
+管道输入/输出流主要用于**线程之间的数据传输**，而传输的媒介为**内存**。管道输入/输出流主要包括了如下 4 种具体实现：`PipedOutputStream`、`PipedInputStream`、`PipedReader` 和 `PipedWriter`，前两种面向字节，而后两种面向字符。
+
+
+
+在下面代码清单所示的例子中，创建了 printThread，它用来接受 main 线程的输入，任何 main 线程的输入均通过 `PipedWriter` 写入，而 printThread 在另一端通过 `PipedReader` 将内容读出并打印。
+
+Piped.java：
+
+```java
+public class Piped {
+    public static void main(String[] args) throws Exception {
+        PipedWriter out = new PipedWriter();
+        PipedReader in = new PipedReader();
+        // 将输出流和输入流进行连接，否则在使用时会抛出 IOException
+        out.connect(in);
+        Thread printThread = new Thread(new Print(in), "PrintThread");
+        printThread.start();
+        int receive = 0;
+        try {
+            while ((receive = System.in.read()) != -1) {
+            	out.write(receive);
+            }
+        } finally {
+        	out.close();
+        }
+    }
+    
+    static class Print implements Runnable {
+        private PipedReader in;
+        
+        public Print(PipedReader in) {
+        	this.in = in;
+        }
+        
+        public void run() {
+            int receive = 0;
+            try {
+                while ((receive = in.read()) != -1) {
+                System.out.print((char) receive);
+                }
+            } catch (IOException ex) {
+            }
+        }
+    } 
+}
+```
+
+运行该示例，输入一组字符串，可以看到被 printThread 进行了原样输出。 
+
+```
+Repeat my words. 
+Repeat my words. 
+```
+
+> 对于 Piped 类型的流，必须先要进行绑定，也就是调用 `connect()` 方法，如果没有将输入/输出流绑定起来，对于该流的访问将会抛出异常。
+
+
+
+### 4.3.5 Thread.join() 的使用
+
+如果一个线程 A 执行了 `thread.join()` 语句，其含义是：**当前线程 A 等待 thread 线程终止之后才从 `thread.join()` 返回。**线程 Thread 除了提供 `join()` 方法之外，还提供了 `join(long millis)` 和 `join(longmillis,int nanos)` 两个具备超时特性的方法。这两个超时方法表示，如果线程 thread 在给定的超时时间里没有终止，那么将会从该超时方法中返回。
+
+
+
+在下面代码清单所示的例子中，创建了 10 个线程，编号 0~9，每个线程调用前一个线程的 `join()` 方法，也就是线程 0 结束了，线程 1 才能从 `join()` 方法中返回，而线程 0 需要等待 main 线程结束。 
+
+Join.java：
+
+```java
+public class Join{
+    public static void main(String[] args) throws Exception {
+        Thread previous = Thread.currentThread();
+        for (int i = 0; i < 10; i++) {
+            // 每个线程拥有前一个线程的引用，需要等待前一个线程终止，才能从等待中返回
+            Thread thread = new Thread(new Domino(previous), String.valueOf(i));
+            thread.start();
+            previous = thread;
+        }
+        TimeUnit.SECONDS.sleep(5);
+        System.out.println(Thread.currentThread().getName() + " terminate.");
+    }
+    
+    static class Domino implements Runnable {
+        private Thread thread;
+        
+        public Domino(Thread thread) {
+        	this.thread = thread;
+        }
+        public void run() {
+            try {
+            	thread.join();
+            } catch (InterruptedException e) {
+            }
+            System.out.println(Thread.currentThread().getName() + " terminate.");
+        }
+    } 
+}
+```
+
+输出如下：
+
+```
+main terminate.
+0 terminate.
+1 terminate.
+2 terminate.
+3 terminate.
+4 terminate.
+5 terminate.
+6 terminate.
+7 terminate.
+8 terminate.
+9 terminate.
+```
+
+从上述输出可以看到，每个线程终止的前提是前驱线程的终止，每个线程等待前驱线程终止后，才从 `join()` 方法返回，这里涉及了等待/通知机制（等待前驱线程结束，接收前驱线程结束通知）。
+
+> 下面是 JDK 中 Thread.join() 方法的部分源码：
+>
+> ```java
+> // 加锁当前线程对象
+> public final synchronized void join() throws InterruptedException{
+>     // 条件不满足，继续等待
+>     while(isAlive()){
+>     	wait(0);
+>     }
+>     // 条件符合，方法返回
+> }
+> ```
+
+当线程终止时，会调用线程自身的 `notifyAll()` 方法，会通知所有等待在该线程对象上的线程。可以看到 `join()` 方法的逻辑结构与等待/通知经典范式一致，即加锁、循环和处理逻辑 3 个步骤。
+
+
+
+### 4.3.6 ThreadLocal 的使用
+
+**ThreadLocal，即线程变量，是一个以 ThreadLocal 对象为键、任意对象为值的存储结构。**这个结构被附带在线程上，也就是说**一个线程可以根据一个 ThreadLocal 对象查询到绑定在这个线程上的一个值**。可以通过 `set(T)` 方法来设置一个值，在当前线程下再通过 `get()` 方法获取到原先设置的值。
+
+
+
+在下面代码清单所示的例子中，构建了一个常用的 Profiler 类，它具有 `begin()` 和 `end()` 两个方法，而 `end()` 方法返回从 `begin()` 方法调用开始到 `end()` 方法被调用时的时间差，单位是毫秒。
+
+Profiler.java：
+
+```java
+public class Profiler {
+    // 第一次 get()方法调用时会进行初始化（如果 set 方法没有调用），每个线程会调用一次
+    private static final ThreadLocal<Long> TIME_THREADLOCAL = new ThreadLocal<Long>();
+    
+    protected Long initialValue() {
+    	return System.currentTimeMillis();
+    }
+    
+    public static final void begin() {
+    	TIME_THREADLOCAL.set(System.currentTimeMillis());
+    }
+    
+    public static final long end() {
+    	return System.currentTimeMillis() - TIME_THREADLOCAL.get();
+    }
+    
+    public static void main(String[] args) throws Exception {
+        Profiler.begin();
+        TimeUnit.SECONDS.sleep(1);
+        System.out.println("Cost: " + Profiler.end() + " mills");
+    } 
+}
+```
+
+输出结果如下所示：
+
+```
+Cost: 1001 mills 
+```
+
+Profiler 可以被复用在方法调用耗时统计的功能上，在方法的入口前执行 `begin()` 方法，在方法调用后执行 `end()` 方法，好处是两个方法的调用不用在一个方法或者类中，比如在 AOP（面向方面编程）中，可以在方法调用前的切入点执行 `begin()` 方法，而在方法调用后的切入点执行 `end()` 方法，这样依旧可以获得方法的执行耗时。
+
+
+
+## 4.4 线程应用实例
+
+
+
+### 4.4.1 等待超时模式
+
+开发人员经常会遇到这样的方法调用场景：调用一个方法时等待一段时间（一般来说是给定一个时间段），如果该方法能够在给定的时间段之内得到结果，那么将结果立刻返回，反之，超时返回默认结果。 
+
+等待/通知的经典范式（加锁、条件循环和处理逻辑 3 个步骤）无法做到超时等待。而超时等待的加入，只需要对经典范式做出非常小的改动，改动内容如下所示。假设超时时间段是 T，那么可以推断出在当前时间 now+T 之后就会超时。定义如下变量：
+
+- **等待持续时间：REMAINING=T。** 
+
+- **超时时间：FUTURE=now+T。** 
+
+这时仅需要 `wait(REMAINING)` 即可，在 `wait(REMAINING)` 返回之后会将执行： **REMAINING=FUTURE–now**。如果 REMAINING 小于等于 0，表示已经超时，直接退出，否则将继续执行 `wait(REMAINING)`。 
+
+>等待超时模式就是在等待/通知范式基础上增加了超时控制，这使得该模式相比原有范式更具有灵活性，因为即使方法执行时间过长，也不会“永久”阻塞调用者，而是会按照调用者的要求“按时”返回。
+
+
+
+### 4.4.2 一个简单的数据库连接池示例
+
+//待补充
+
+
+
+
+
+
+
+
+
+# 5. Java 中的锁
+
+
+
+## 5.1 Lock 接口
+
+锁是**用来控制多个线程访问共享资源**的方式。一般来说，一个锁能够防止多个线程同时访问共享资源（但是有些锁可以允许多个线程并发的访问共享资源，比如读写锁）。
+
+在 Lock 接口出现之前，Java 程序是靠 synchronized 关键字实现锁功能的，而 Java SE 5 之后，并发包中新增了 Lock 接口（以及相关实现类）用来实现锁功能，它提供了与 synchronized 关键字类似的同步功能，只是**在使用时需要显式地获取和释放锁**。虽然它缺少了（通过 synchronized 块或者方法所提供的）隐式获取释放锁的便捷性，但是却**拥有了锁获取与释放的可操作性、可中断的获取锁以及超时获取锁等多种 synchronized 关键字所不具备的同步特性。**
+
+> **使用 synchronized 关键字将会隐式地获取锁，但是它将锁的获取和释放固化了，也就是先获取再释放。**当然，这种方式简化了同步的管理，可是扩展性没有显式的锁获取和释放来的好。例如，针对一个场景，手把手进行锁获取和释放，先获得锁 A，然后再获取锁 B，当锁 B 获得后，释放锁 A 同时获取锁 C，当锁 C 获得后，再释放 B 同时获取锁 D，以此类推。这种场景下，synchronized 关键字就不那么容易实现了，而使用 Lock 却容易许多。
+
+
+
+Lock 的使用很简单，下面代码是 Lock 的使用的方式：
+
+LockUseCase.java：
+
+```java
+Lock lock = new ReentrantLock();
+lock.lock();
+try {
+} finally {
+	lock.unlock();
+}
+```
+
+**在 finally 块中释放锁**，目的是保证**在获取到锁之后，最终能够被释放。** 
+
+不要将获取锁的过程写在 try 块中，因为如果在获取锁（自定义锁的实现）时发生了异常，异常抛出的同时，也会导致锁无故释放。
+
+
+
+Lock 接口提供的 synchronized 关键字所不具备的主要特性如下表所示：
+
+![1637931296569](./imgs/1637931296569.png)
+
+Lock 是一个接口，它定义了锁获取和释放的基本操作，Lock 的 API 如下表所示：
+
+![1637931489711](./imgs/1637931489711.png) 
+
+>Lock 接口的实现基本都是通过聚合了一个同步器的子类来完成线程访问控制的。
+
+
+
+## 5.2 队列同步器
+
+**队列同步器 AbstractQueuedSynchronizer**（以下简称同步器），是**用来构建锁或者其他同步组件的基础框架**，它使用了一个 int 成员变量表示同步状态，通过内置的 FIFO 队列来完成资源获取线程的排队工作。
+
+同步器的主要使用方式是**继承**，**子类通过继承同步器并实现它的抽象方法来管理同步状态**，在抽象方法的实现过程中免不了要对同步状态进行更改，这时就需要使用同步器提供的 3 个方法（`getState()`、`setState(int newState)` 和 `compareAndSetState(int expect,int  update)`）来进行操作，因为它们能够保证状态的改变是安全的。**子类推荐被定义为自定义同步组件的静态内部类**，同步器自身没有实现任何同步接口，它仅仅是定义了若干同步状态获取和释放的方法来供自定义同步组件使用，**同步器既可以支持独占式地获取同步状态，也可以支持共享式地获取同步状态**，这样就可以方便实现不同类型的同步组件（ReentrantLock、ReentrantReadWriteLock 和 CountDownLatch 等）。 
+
+**同步器是实现锁（也可以是任意同步组件）的关键，在锁的实现中聚合同步器，利用同步器实现锁的语义。**可以这样理解二者之间的关系：**锁是面向使用者的**，它定义了使用者与锁交互的接口（比如可以允许两个线程并行访问），隐藏了实现细节；**同步器面向的是锁的实现者**，它简化了锁的实现方式，屏蔽了同步状态管理、线程的排队、等待与唤醒等底层操作。锁和同步器很好地隔离了使用者和实现者所需关注的领域。
+
+
+
+### 5.2.1 队列同步器的接口与示例
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
