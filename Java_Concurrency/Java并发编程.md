@@ -1,6 +1,6 @@
 # Java并发编程
 
-> 笔记在阅读完《Java并发编程的艺术》和《Java并发编程实战》二书时所写。
+> 笔记在阅读《Java并发编程的艺术》和《Java并发编程实战》二书时所整理
 
 [toc]
 
@@ -1803,25 +1803,120 @@ Lock 是一个接口，它定义了锁获取和释放的基本操作，Lock 的 
 
 ### 5.2.1 队列同步器的接口与示例
 
+同步器的设计是基于**模板方法模式**的，也就是说，**使用者需要继承同步器并重写指定的方法，随后将同步器组合在自定义同步组件的实现中，并调用同步器提供的模板方法，而这些模板方法将会调用使用者重写的方法。**重写同步器指定的方法时，需要使用同步器提供的如下 3 个方法来访问或修改同步状态。
+
+- **getState()：**获取当前同步状态。 
+
+- **setState(int newState)：**设置当前同步状态。 
+
+- **compareAndSetState(int expect,int update)：**使用 **CAS** 设置当前状态，该方法能够保证状态设置的原子性。 
+
+同步器可重写的方法与描述如下表所示：
+
+![1638005019308](./imgs/1638005019308.png)
+
+**实现自定义同步组件时，将会调用同步器提供的模板方法**，这些（部分）模板方法与描述如下表所示：
+
+![1638005145105](./imgs/1638005145105.png)
+
+同步器提供的模板方法基本上分为 3 类：**独占式获取与释放同步状态**、**共享式获取与释放同步状态**和**查询同步队列中的等待线程情况**。自定义同步组件将使用同步器提供的模板方法来实现自己的同步语义。 
+
+***
+
+下面通过一个独占锁的示例来深入了解一下同步器的工作原理。 
+
+顾名思义，**独占锁**就是**在同一时刻只能有一个线程获取到锁，而其他获取锁的线程只能处于同步队列中等待，只有获取锁的线程释放了锁，后继的线程才能够获取锁**，如下面代码清单所示：
+
+Mutex.java：
+
+```java
+class Mutex implements Lock {
+	// 静态内部类，自定义同步器
+ 	private static class Sync extends AbstractQueuedSynchronizer {
+ 		// 是否处于占用状态
+		protected boolean isHeldExclusively() {
+ 			return getState() == 1;
+		}
+        
+ 		// 当状态为 0 的时候获取锁
+ 		public boolean tryAcquire(int acquires) {
+ 			if (compareAndSetState(0, 1)) {
+ 				setExclusiveOwnerThread(Thread.currentThread());
+ 				return true;
+ 			}
+ 			return false;
+	 	}
+        
+ 		// 释放锁，将状态设置为 0
+ 		protected boolean tryRelease(int releases) {
+ 			if (getState() == 0) throw new IllegalMonitorStateException();
+ 			setExclusiveOwnerThread(null);
+ 			setState(0);
+ 			return true;
+ 		}
+        
+ 		// 返回一个 Condition，每个 condition 都包含了一个 condition 队列
+ 		Condition newCondition() {
+ 			return new ConditionObject();
+ 		}
+ 	}
+    
+ 	// 仅需要将操作代理到 Sync 上即可
+ 	private final Sync sync = new Sync();
+    
+ 	public void lock() {
+ 		sync.acquire(1);
+ 	}
+    
+    public boolean tryLock() {
+    	return sync.tryAcquire(1);
+    }
+
+    public void unlock() {
+	    sync.release(1);
+    }
+
+    public Condition newCondition() {
+	    return sync.newCondition();
+    }
+
+    public boolean isLocked() {
+    	return sync.isHeldExclusively();
+    }
+
+    public boolean hasQueuedThreads() {
+    	return sync.hasQueuedThreads();
+    }
+
+    public void lockInterruptibly() throws InterruptedException {
+    	sync.acquireInterruptibly(1);
+    }
+
+    public boolean tryLock(long timeout, TimeUnit unit) throws InterruptedException {
+    	return sync.tryAcquireNanos(1, unit.toNanos(timeout));
+    } 
+}
+```
+
+上述示例中，独占锁 Mutex 是一个自定义同步组件，它在同一时刻只允许一个线程占有锁。**Mutex 中定义了一个静态内部类，该内部类继承了同步器并实现了独占式获取和释放同步状态。**在 `tryAcquire(int acquires)` 方法中，如果经过 CAS 设置成功（同步状态 设置为 1），则代表获取了同步状态，而在 `tryRelease(int releases)` 方法中只是将同步状态重置为 0。用户使用 Mutex 时并不会直接和内部同步器的实现打交道，而是调用 Mutex 提供的方法，在 Mutex 的实现中，以获取锁的 `lock()` 方法为例，只需要在方法实现中调用同步器的模板方法 `acquire(int args)` 即可，当前线程调用该方法获取同步状态失败后会被加入到同步队列中等待，这样就大大降低了实现一个可靠自定义同步组件的门槛。
 
 
 
+### 5.2.2 队列同步器的实现分析
+
+从实现角度分析同步器是如何完成线程同步的，主要包括： 
+
+- 同步队列 
+
+- 独占式同步状态获取与释放
+
+- 共享式同步状态获取与释放 
+
+- 超时获取同步状态等同步器的核心数据结构与模板方法
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+#### 1）同步队列
 
 
 
