@@ -1906,17 +1906,150 @@ class Mutex implements Lock {
 
 从实现角度分析同步器是如何完成线程同步的，主要包括： 
 
-- 同步队列 
+- 同步队列
 
 - 独占式同步状态获取与释放
 
-- 共享式同步状态获取与释放 
+- 共享式同步状态获取与释放
 
 - 超时获取同步状态等同步器的核心数据结构与模板方法
 
 
 
 #### 1）同步队列
+
+同步器依赖内部的同步队列（一个 **FIFO 双向队列**）来完成同步状态的管理，当前线程获取同步状态失败时，同步器会将当前线程以及等待状态等信息构造成为一个节点（Node）并将其加入同步队列，同时会阻塞当前线程，当同步状态释放时，会把首节点中的线程唤醒，使其再次尝试获取同步状态。 
+
+同步队列中的节点（Node）用来**保存获取同步状态失败的线程引用、等待状态以及前驱和后继节点**，节点的属性类型与名称以及描述如下表所示：
+
+![1638085239095](./imgs/1638085239095.png)
+
+
+
+节点是构成同步队列的基础，同步器拥有首节点（head）和尾节点（tail），没有成功获取同步状态的线程将会成为节点加入该队列的尾部，同步队列的基本结构如下图所示：
+
+![1638085519411](./imgs/1638085519411.png)
+
+同步器包含了两个节点类型的引用，一个指向头节点，而另一个指向尾节点。
+
+
+
+当一个线程成功地获取了同步状态（或者锁），其他线程将无法获取到同步状态，转而被构造成为节点并加入到同步队列中，而这个加入队列的过程必须要保证线程安全，因此同步器提供了一个**基于 CAS 的设置尾节点的方法**：`compareAndSetTail(Node expect,Node update)`，它需要传递当前线程“认为”的尾节点和当前节点，只有设置成功后，当前节点才正式与之前的尾节点建立关联。
+
+同步器将节点加入到同步队列的过程如下图所示：
+
+![1638085715962](./imgs/1638085715962.png)
+
+
+
+同步队列遵循 FIFO，**首节点是获取同步状态成功的节点，首节点的线程在释放同步状态时，将会唤醒后继节点，而后继节点将会在获取同步状态成功时将自己设置为首节点**，该过程如下图所示：
+
+![1638085843190](./imgs/1638085843190.png)
+
+设置首节点是通过获取同步状态成功的线程来完成的，**由于只有一个线程能够成功获取到同步状态，因此设置头节点的方法并不需要使用 CAS 来保证**，它只需要将首节点设置成为原首节点的后继节点并断开原首节点的 next 引用即可。 
+
+
+
+#### 2）独占式同步状态获取与释放
+
+通过调用同步器的 `acquire(int arg)` 方法可以获取同步状态，该方法对中断不敏感，也就是由于线程获取同步状态失败后进入同步队列中，后续对线程进行中断操作时，线程不会从同步队列中移出，该方法代码如下所示。
+
+同步器的 acquire 方法：
+
+```java
+public final void acquire(int arg) {
+    if (!tryAcquire(arg) && acquireQueued(addWaiter(Node.EXCLUSIVE), arg)) {
+    	selfInterrupt();
+    } 
+}
+```
+
+上述代码主要完成了同步状态获取、节点构造、加入同步队列以及在同步队列中自旋等待的相关工作，其主要逻辑是：**首先调用自定义同步器实现的 `tryAcquire(int arg)` 方法，该方法保证线程安全的获取同步状态，如果同步状态获取失败，则构造同步节点（独占式 Node.EXCLUSIVE，同一时刻只能有一个线程成功获取同步状态）并通过 `addWaiter(Node node)` 方法将该节点加入到同步队列的尾部，最后调用 `acquireQueued(Node node,int arg)` 方法，使得该节点以“死循环”的方式获取同步状态。如果获取不到则阻塞节点中的线程，而被阻塞线程的唤醒主要依靠前驱节点的出队或阻塞线程被中断来实现。**
+
+
+
+下面分析一下相关工作。首先是节点的构造以及加入同步队列，如代码清单所示：
+
+同步器的 addWaiter 和 enq 方法：
+
+```java
+private Node addWaiter(Node mode) {
+    Node node = new Node(Thread.currentThread(), mode);
+    // 快速尝试在尾部添加
+    Node pred = tail;
+    if (pred != null) {
+        node.prev = pred;
+        if (compareAndSetTail(pred, node)) {
+            pred.next = node;
+            return node;
+        }
+    }
+    enq(node);
+    return node; 
+}
+
+private Node enq(final Node node) {
+    for (; ; ) {
+        Node t = tail;
+        if (t == null) { // Must initialize
+        	if (compareAndSetHead(new Node())) tail = head;
+        } else {
+            node.prev = t;
+            if (compareAndSetTail(t, node)) {
+                t.next = node;
+                return t;
+            }
+        }
+    } 
+}
+```
+
+上述代码通过使用 `compareAndSetTail(Node expect,Node update)` 方法来确保节点能够被线程安全添加。试想一下：如果使用一个普通的 LinkedList 来维护节点之间的关系， 那么当一个线程获取了同步状态，而其他多个线程由于调用 `tryAcquire(int arg)` 方法获取同步状态失败而并发地被添加到 LinkedList 时，LinkedList 将难以保证 Node 的正确添加，最终的结果可能是节点的数量有偏差，而且顺序也是混乱的。 
+
+在 `enq(final Node node)` 方法中，同步器通过“死循环”来保证节点的正确添加，在“死循环”中只有通过 CAS 将节点设置成为尾节点之后，当前线程才能从该方法返回，否则，当前线程不断地尝试设置。可以看出，`enq(final Node node)` 方法将并发添加节点的请求通过 CAS 变得“串行化”了。 
+
+
+
+节点进入同步队列之后，就进入了一个**自旋**的过程，每个节点（或者说每个线程）都在自省地观察，当条件满足，获取到了同步状态，就可以从这个自旋过程中退出，否则依旧留在这个自旋过程中（并会阻塞节点的线程），如代码清单所示：
+
+同步器的 acquireQueued 方法：
+
+```java
+final boolean acquireQueued(final Node node, int arg) {
+    boolean failed = true;
+    try {
+        boolean interrupted = false;
+        for (; ; ) {
+            final Node p = node.predecessor();
+            if (p == head && tryAcquire(arg)) {
+                setHead(node);
+                p.next = null; // help GC
+                failed = false;
+                return interrupted;
+            }
+            if (shouldParkAfterFailedAcquire(p, node) && parkAndCheckInterrupt()) {
+            	interrupted = true;
+            }
+        }
+    } finally {
+    	if (failed) cancelAcquire(node);
+    } 
+}
+```
+
+在 `acquireQueued(final Node node,int arg)` 方法中，当前线程在“死循环”中尝试获取同步状态，而**只有前驱节点是头节点才能够尝试获取同步状态。**原因如下：
+
+1. 头节点是成功获取到同步状态的节点，而头节点的线程释放了同步状态之后，将会唤醒其后继节点，后继节点的线程被唤醒后需要检查自己的前驱节点是否是头节点。
+
+2. 维护同步队列的 FIFO 原则。该方法中，节点自旋获取同步状态的行为如下图所示。
+
+   ![1638088676226](./imgs/1638088676226.png) 
+
+   >由于非首节点线程前驱节点出队或者被中断而从等待状态返回，随后检查自己的前驱是否是头节点，如果是则尝试获取同步状态。可以看到**节点和节点之间在循环检查的过程中基本不相互通信，而是简单地判断自己的前驱是否为头节点**，这样就使得节点的释放规则符合 FIFO，并且也便于对过早通知的处理（过早通知是指前驱节点不是头节点的线程由于中断而被唤醒）。
+
+
+
+
 
 
 
