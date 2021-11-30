@@ -3278,25 +3278,262 @@ public ArrayBlockingQueue(int capacity, boolean fair) {
 
 #### 2）LinkedBlockingQueue
 
+LinkedBlockingQueue 是一个用**链表**实现的**有界阻塞队列**。此队列的默认和最大长度为 Integer.MAX_VALUE。此队列按照**先进先出**的原则对元素进行排序。
 
 
 
+#### 3）PriorityBlockingQueue
+
+PriorityBlockingQueue 是一个**支持优先级**的**无界阻塞队列**。默认情况下元素采取**自然顺序升序排列**。也可以自定义类实现 `compareTo()` 方法来指定元素排序规则，或者初始化 PriorityBlockingQueue 时，指定构造参数 `Comparator` 来对元素进行排序。需要注意的是**不能保证同优先级元素的顺序。** 
 
 
 
+#### 4）DelayQueue
+
+DelayQueue 是一个**支持延时获取元素**的**无界阻塞队列**。队列使用 PriorityQueue 来实现。**队列中的元素必须实现 Delayed 接口，在创建元素时可以指定多久才能从队列中获取当前元素。只有在延迟期满时才能从队列中提取元素。** 
+
+DelayQueue 非常有用，可以将 DelayQueue 运用在以下应用场景：
+
+- 缓存系统的设计：可以用 DelayQueue 保存缓存元素的有效期，使用一个线程循环查询 DelayQueue，一旦能从 DelayQueue 中获取元素时，表示缓存有效期到了。 
+
+- 定时任务调度：使用 DelayQueue 保存当天将会执行的任务和执行时间，一旦从 DelayQueue 中获取到任务就开始执行，比如 TimerQueue 就是使用 DelayQueue 实现的。
 
 
 
+**1. 如何实现 Delayed 接口**
+
+DelayQueue 队列的元素必须实现 Delayed 接口。可以参考 ScheduledThreadPoolExecutor 里 ScheduledFutureTask 类的实现，一共有三步：
+
+**第一步：**在对象创建的时候，初始化基本数据。使用 time 记录当前对象延迟到什么时候可以使用，使用 sequenceNumber 来标识元素在队列中的先后顺序。代码如下：
+
+```java
+private static final AtomicLong sequencer = new AtomicLong(0);
+
+ScheduledFutureTask(Runnable r, V result, long ns, long period) {
+    ScheduledFutureTask(Runnable r, V result, long ns, long period){
+        super(r, result);
+        this.time = ns;
+        this.period = period;
+        this.sequenceNumber = sequencer.getAndIncrement();
+    } 
+}
+```
+
+**第二步：**实现 `getDelay` 方法，该方法返回当前元素还需要延时多长时间，单位是纳秒，代码如下：
+
+```java
+public long getDelay(TimeUnit unit) {
+	return unit.convert(time - now(), TimeUnit.NANOSECONDS);
+}
+```
+
+通过构造函数可以看出延迟时间参数 ns 的单位是纳秒，自己设计的时候最好使用纳秒，因为实现 `getDelay()` 方法时可以指定任意单位，一旦以秒或分作为单位，而延时时间又精确不到纳秒就麻烦了。使用时请注意当 time 小于当前时间时，`getDelay` 会返回负数。 
+
+**第三步：**实现 `compareTo` 方法来指定元素的顺序。例如，让延时时间最长的放在队列的末尾。实现代码如下：
+
+```java
+public int compareTo(Delayed other) {
+    if (other == this)// compare zero ONLY if same object
+    	return 0;
+    if (other instanceof ScheduledFutureTask) {
+        ScheduledFutureTask<> x = (ScheduledFutureTask<>) other; long diff = time - x.time;
+        if (diff < 0) return -1;
+        else if (diff > 0) return 1;
+        else if (sequenceNumber < x.sequenceNumber) return -1;
+        else return 1;
+    }
+    
+    long d = (getDelay(TimeUnit.NANOSECONDS) other.getDelay(TimeUnit.NANOSECONDS));
+     return (d == 0) ? 0 : ((d < 0) ? -1 : 1);
+}
+```
 
 
 
+**2. 如何实现延时阻塞队列**
+
+延时阻塞队列的实现很简单，**当消费者从队列里获取元素时，如果元素没有达到延时时间，就阻塞当前线程。** 
+
+```java
+long delay = first.getDelay(TimeUnit.NANOSECONDS);
+if (delay <= 0) return q.poll();
+else if (leader != null) available.await();
+else {
+    Thread thisThread = Thread.currentThread();
+    leader = thisThread;
+    try {
+    	available.awaitNanos(delay);
+    } finally {
+    	if (leader == thisThread) leader = null;
+    } 
+}
+```
+
+代码中的变量 leader 是一个等待获取队列头部元素的线程。如果 leader 不等于空，表示已经有线程在等待获取队列的头元素。所以，使用 `await()` 方法让当前线程等待信号。如果 leader 等于空，则把当前线程设置成 leader，并使用 `awaitNanos()` 方法让当前线程等待接收信号或等待 delay 时间。
 
 
 
+#### 5）SynchronousQueue
+
+SynchronousQueue 是一个**不存储元素**的**阻塞队列**。**每一个 put 操作必须等待一个 take 操作，否则不能继续添加元素。** 
+
+它支持公平访问队列。默认情况下线程采用非公平性策略访问队列。使用以下构造方法可以创建公平性访问的 SynchronousQueue，如果设置为 true，则等待的线程会采用先进先出的顺序访问队列。
+
+```java
+public SynchronousQueue(boolean fair) {
+	transferer = fair new TransferQueue() :new TransferStack();
+}
+```
+
+SynchronousQueue 可以看成是一个传球手，负责把生产者线程处理的数据**直接传递**给消费者线程。队列本身并不存储任何元素，非常**适合传递性场景**。SynchronousQueue 的吞吐量高于 LinkedBlockingQueue 和 ArrayBlockingQueue。 
 
 
 
+#### 6) LinkedTransferQueue
+
+LinkedTransferQueue 是一个由**链表**结构组成的**无界阻塞 TransferQueue 队列**。相对于其他阻塞队列，LinkedTransferQueue 多了 `tryTransfer` 和 `transfer` 方法。 
+
+**1. transfer 方法**
+
+如果当前有消费者正在等待接收元素（消费者使用 `take()`方法或带时间限制的 `poll()` 方法时），transfer 方法可以把生产者传入的元素立刻 transfer（传输）给消费者。如果没有消费者在等待接收元素，transfer 方法会将元素存放在队列的 tail 节点，并**等到该元素被消费者消费了才返回**。transfer 方法的关键代码如下：
+
+```java
+Node pred = tryAppend(s, haveData);
+return awaitMatch(s, pred, e, (how == TIMED), nanos);
+```
+
+第一行代码是试图把存放当前元素的 s 节点作为 tail 节点。第二行代码是让 CPU 自旋等待消费者消费元素。因为自旋会消耗 CPU，所以自旋一定的次数后使用 `Thread.yield()` 方法来暂停当前正在执行的线程，并执行其他线程。
 
 
 
+**2. tryTransfer 方法**
 
+tryTransfer 方法是用来试探生产者传入的元素是否能直接传给消费者。如果没有消费者等待接收元素，则返回 false。和 transfer 方法的区别是 tryTransfer 方法**无论消费者是否接收，方法立即返回**，而 transfer 方法是必须等到消费者消费了才返回。
+
+对于带有时间限制的 `tryTransfer(E e，long timeout，TimeUnit unit)` 方法，试图把生产者传入的元素直接传给消费者，但是如果没有消费者消费该元素则等待指定的时间再返回，如果超时还没消费元素，则返回 false，如果在超时时间内消费了元素，则返回 true。
+
+
+
+#### 7) LinkedBlockingDeque
+
+LinkedBlockingDeque 是一个由**链表**结构组成的**双向阻塞队列**。所谓双向队列指的是可以从队列的两端插入和移出元素。双向队列因为多了一个操作队列的入口，在多线程同时入队时，也就减少了一半的竞争。
+
+相比其他的阻塞队列，LinkedBlockingDeque 多了 `addFirst`、`addLast`、`offerFirst`、`offerLast`、`peekFirst` 和 `peekLast` 等方法，以 First 单词结尾的方法，表示插入、获取（peek）或移除双端队列的第一个元素。以 Last 单词结尾的方法，表示插入、获取或移除双端队列的最后一个元素。另外，插入方法 add 等同于 addLast，移除方法 remove 等效于 removeFirst。但是 take 方法却等同于 takeFirst。
+
+> 在初始化 LinkedBlockingDeque 时可以设置容量防止其过度膨胀。另外，双向阻塞队列可以运用在“工作窃取”模式中。
+
+
+
+### 6.3.3 阻塞队列的实现原理
+
+> 如果队列是空的，消费者会一直等待，当生产者添加元素时，消费者是如何知道当前队列有元素的呢？JDK 是如何设计阻塞队列的，如何让生产者和消费者进行高效率的通信呢？
+
+**使用通知模式实现。**所谓通知模式，就是**当生产者往满的队列里添加元素时会阻塞住生产者，当消费者消费了一个队列中的元素后，会通知生产者当前队列可用。**
+
+通过查看 JDK 源码发现 ArrayBlockingQueue 使用了 **Condition** 来实现，代码如下：
+
+```java
+private final Condition notFull;
+private final Condition notEmpty;
+
+public ArrayBlockingQueue(int capacity, boolean fair) {
+    // 省略其他代码
+    notEmpty = lock.newCondition();
+    notFull = lock.newCondition();
+}
+
+public void put(E e) throws InterruptedException {
+    checkNotNull(e);
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        while (count == items.length) notFull.await();
+        insert(e);
+    } finally {
+    	lock.unlock();
+    } 
+}
+
+public E take() throws InterruptedException {
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        while (count == 0) notEmpty.await();
+        return extract();
+    } finally {
+    	lock.unlock();
+    } 
+}
+
+private void insert(E x) {
+    items[putIndex] = x;
+    putIndex = inc(putIndex);
+    ++count;
+    notEmpty.signal();
+}
+```
+
+当往队列里插入一个元素时，如果队列不可用，那么阻塞生产者主要通过 `LockSupport.park(this)`来实现。
+
+```java
+public final void await() throws InterruptedException {
+    if (Thread.interrupted()) throw new InterruptedException();
+    Node node = addConditionWaiter();
+    int savedState = fullyRelease(node);
+    int interruptMode = 0;
+    while (!isOnSyncQueue(node)) {
+        LockSupport.park(this);
+        if ((interruptMode = checkInterruptWhileWaiting(node)) != 0) break;
+    }
+    if (acquireQueued(node, savedState) && interruptMode != THROW_IE) interruptMode 
+    = REINTERRUPT;
+    if (node.nextWaiter != null) // clean up if cancelled
+    	unlinkCancelledWaiters();
+    if (interruptMode != 0) reportInterruptAfterWait(interruptMode);
+}
+```
+
+继续进入源码，发现调用 `setBlocker` 先保存一下将要阻塞的线程，然后调用 `unsafe.park` 阻塞当前线程。
+
+```java
+public static void park(Object blocker) {
+    Thread t = Thread.currentThread();
+    setBlocker(t, blocker);
+    unsafe.park(false, 0L);
+    setBlocker(t, null);
+}
+```
+
+`unsafe.park` 是个 native 方法，代码如下：
+
+```java
+public native void park(boolean isAbsolute, long time);
+```
+
+
+
+`park` 这个方法会阻塞当前线程，只有以下 4 种情况中的一种发生时，该方法才会返回： 
+
+- 与 park 对应的 unpark 执行或已经执行时。“已经执行”是指 unpark 先执行，然后再执行 park 的情况。 
+
+- 线程被中断时。 
+
+- 等待完 time 参数指定的毫秒数时。 
+
+- 异常现象发生时，这个异常现象没有任何原因。 
+
+
+
+继续看一下 JVM 是如何实现 park 方法：park 在不同的操作系统中使用不同的方式实现，在 Linux 下使用的是系统方法 `pthread_cond_wait` 实现。实现代码在 JVM 源码路径 `src/os/linux/vm/os_linux.cpp` 里的 `os::PlatformEvent::park` 方法，代码如下：
+
+![1638273132361](./imgs/1638273132361.png)
+
+pthread_cond_wait 是一个多线程的条件变量函数，cond 是 condition 的缩写，字面意思可以理解为线程在等待一个条件发生，这个条件是一个全局变量。这个方法接收两个参数：一个共享变量_cond，一个互斥量\_mutex。而 unpark 方法在 Linux 下是使用 pthread_cond_signal 实现的。 park 方法在 Windows 下则是使用 WaitForSingleObject 实现的。想知道 pthread_cond_wait 是如何实现的，可以参考 glibc-2.5 的 nptl/sysdeps/pthread/pthread_cond_wait.c。 
+
+当线程被阻塞队列阻塞时，线程会进入 WAITING（parking）状态。我们可以使用 `jstack dump` 阻塞的生产者线程看到这点，如下：
+
+![1638273254620](./imgs/1638273254620.png)
+
+
+
+## 6.4 Fork / Join 框架
