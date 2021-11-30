@@ -2820,6 +2820,476 @@ Condition 的 `signalAll()` 方法，相当于对等待队列中的每个节点�
 
 
 
+# 6. Java 并发容器和框架
+
+
+
+## 6.1 ConcurrentHashMap 的实现原理与使用
+
+ConcurrentHashMap 是**线程安全且高效**的 HashMap。
+
+### 6.1.1 为什么要使用 ConcurrentHashMap
+
+在并发编程中使用 HashMap 可能导致程序死循环。而使用线程安全的 HashTable 效率又非常低下，基于以上两个原因，便有了 ConcurrentHashMap 的登场机会。
+
+
+
+#### 1）线程不安全的 HashMap
+
+**在多线程环境下，使用 HashMap 进行 put 操作会引起死循环，导致 CPU 利用率接近 100%**，所以在并发情况下不能使用 HashMap。例如，执行以下代码会引起死循环。
+
+```java
+final HashMap<String, String> map = new HashMap<String, String>(2);
+Thread t = new Thread(new Runnable() {
+    @Override
+    public void run() {
+        for (int i = 0; i < 10000; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                	map.put(UUID.randomUUID().toString(), "");
+                }
+            }, "ftf" + i).start();
+        }
+    }
+}, "ftf");
+t.start();
+t.join();
+```
+
+HashMap 在并发执行 put 操作时会引起死循环，是因为**多线程会导致 HashMap 的 Entry 链表形成环形数据结构，一旦形成环形数据结构，Entry 的 next 节点永远不为空，就会产生死循环获取 Entry。**
+
+
+
+#### 2）效率低下的 HashTable
+
+**HashTable 容器使用 synchronized 来保证线程安全**，但在线程竞争激烈的情况下 HashTable 的效率非常低下。因为**当一个线程访问 HashTable 的同步方法，其他线程也访问 HashTable 的同步方法时，会进入阻塞或轮询状态。**如线程 1 使用 put 进行元素添加，线程 2 不但不能使用 put 方法添加元素，也不能使用 get 方法来获取元素，所以竞争越激烈效率越低。 
+
+
+
+#### 3）ConcurrentHashMap 的锁分段技术可有效提升并发访问率
+
+HashTable 容器在竞争激烈的并发环境下表现出效率低下的原因是所有访问 HashTable 的线程都必须竞争同一把锁；
+
+假如容器里有多把锁，每一把锁用于锁容器其中一部分数据，那么当多线程访问容器里不同数据段的数据时，线程间就不会存在锁竞争，从而可以有效提高并发访问效率，这就是 ConcurrentHashMap 所使用的**锁分段技术**。**首先将数据分成一段一段地存储，然后给每一段数据配一把锁，当一个线程占用锁访问其中一个段数据的时候，其他段的数据也能被其他线程访问。** 
+
+
+
+### 6.1.2 ConcurrentHashMap 的结构
+
+通过 ConcurrentHashMap 的**类图**来分析 ConcurrentHashMap 的结构，如下图所示：
+
+![1638241505783](./imgs/1638241505783.png)
+
+ConcurrentHashMap**（JDK 1.7）**是由 **Segment 数组结构**和 **HashEntry 数组结构**组成。**Segment 是一种可重入锁（ReentrantLock），在 ConcurrentHashMap 里扮演锁的角色；HashEntry 则用于存储键值对数据**。**一个 ConcurrentHashMap 里包含一个 Segment 数组。**Segment 的结构和 HashMap 类似，是一种数组和链表结构。**一个 Segment 里包含一个 HashEntry 数组，每个 HashEntry 是一个链表结构的元素，每个 Segment 守护着一个 HashEntry 数组里的元素，当对 HashEntry 数组的数据进行修改时，必须首先获得与它对应的 Segment 锁**，如下图所示：
+
+![1638241736416](./imgs/1638241736416.png)
+
+ 
+
+### 6.1.3 ConcurrentHashMap 的初始化
+
+ConcurrentHashMap 初始化方法是通过 `initialCapacity`、`loadFactor` 和 `concurrencyLevel` 等几个参数来初始化 **segment 数组**、**段偏移量 segmentShift**、**段掩码 segmentMask** 和每个 segment 里的 **HashEntry 数组**来实现的。 
+
+#### 1）初始化 segments 数组
+
+源代码：
+
+```java
+if (concurrencyLevel > MAX_SEGMENTS) concurrencyLevel = MAX_SEGMENTS;
+int sshift = 0;
+int ssize = 1;
+while (ssize < concurrencyLevel) {
+    ++sshift;
+    ssize <<= 1; 
+}
+segmentShift = 32 - sshift;
+segmentMask = ssize - 1;
+this.segments = Segment.newArray(ssize);
+```
+
+由上面的代码可知，segments 数组的长度 ssize 是通过 concurrencyLevel 计算得出的。为了能通过**按位与**的散列算法来定位 segments 数组的索引，**必须保证 segments 数组的长度是 2 的 N 次方（power-of-two size）**，所以必须计算出一个**大于或等于 concurrencyLevel 的最小的 2 的 N 次方值来作为 segments 数组的长度**。假如 concurrencyLevel 等于 14、15 或 16，ssize 都会等于 16，即容器里锁的个数也是 16。 
+
+> 注意： 
+>
+> concurrencyLevel 的最大值是 65535，这意味着 segments 数组的长度最大为 65536，对应的二进制是 16 位。
+
+
+
+#### 2）初始化 segmentShift(段偏移量) 和 segmentMask(段掩码)
+
+这两个全局变量需要在定位 segment 时的散列算法里使用，**sshift 等于 ssize 从 1 向左移位的次数**，在默认情况下 concurrencyLevel 等于 16，1 需要向左移位移动 4 次，所以 sshift 等于 4。 
+
+**segmentShift 用于定位参与散列运算的位数，segmentShift 等于 32 减 sshift，所以等于 28**，这里之所以用 32 是因为 ConcurrentHashMap 里的 `hash()` 方法输出的最大数是 32 位的，后面的测试中可以看到这点。**segmentMask 是散列运算的掩码，等于 ssize 减1，即 15**，掩码的二进制各个位的值都是 1。因为 ssize 的最大长度是 65536，所以 segmentShift 最大值是 16，segmentMask 最大值是 65535，对应的二进制是 16 位，每个位都是 1。 
+
+
+
+#### 3）初始化每个 segment
+
+**输入参数 `initialCapacity` 是 ConcurrentHashMap 的初始化容量，`loadfactor` 是每个 segment 的负载因子，在构造方法里需要通过这两个参数来初始化数组中的每个 segment。**
+
+```java
+if (initialCapacity > MAXIMUM_CAPACITY) initialCapacity = MAXIMUM_CAPACITY;
+int c = initialCapacity / ssize;
+if (c * ssize < initialCapacity)
+	++c;
+int cap = 1;
+while (cap < c) cap <<= 1;
+for (int i = 0; i < this.segments.length; ++i) {
+	this.segments[i] = new Segment<K, V>(cap, loadFactor);
+}
+```
+
+上面代码中的变量 `cap` 就是 segment 里 HashEntry 数组的长度，它等于 initialCapacity 除以 ssize 的倍数 c，如果 c 大于 1，就会取大于等于 c 的 2 的 N 次方值，所以 `cap` 不是 1，就是 2 的 N 次方。
+
+segment 的容量 `threshold＝（int）cap*loadFactor`，默认情况下 initialCapacity 等于 16，loadfactor 等于 0.75，通过运算 cap 等于 1，threshold 等于零。 
+
+
+
+### 6.1.4 定义 Segment
+
+既然 ConcurrentHashMap 使用分段锁 Segment 来保护不同段的数据，那么在插入和获取元素的时候，必须先通过散列算法定位到 Segment。可以看到 ConcurrentHashMap 会首先使用 `Wang/Jenkins hash` 的变种算法对元素的 hashCode 进行一次再散列。
+
+```java
+private static int hash(int h) {
+    h += (h << 15) ^ 0xffffcd7d;
+    h ^= (h >>> 10);
+    h += (h << 3);
+    h ^= (h >>> 6);
+    h += (h << 2) + (h << 14);
+    return h ^ (h >>> 16);
+}
+```
+
+之所以进行再散列，目的是**减少散列冲突**，使元素能够均匀地分布在不同的 Segment 上，从而提高容器的存取效率。假如散列的质量差到极点，那么所有的元素都在一个 Segment 中，不仅存取元素缓慢，分段锁也会失去意义。
+
+通过再散列能**让数字的每一位都参加到散列运算当中**，从而减少散列冲突。ConcurrentHashMap 通过以下散列算法定位 segment。
+
+```java
+final Segment<K, V> segmentFor(int hash) {
+	return segments[(hash >>> segmentShift) & segmentMask];
+}
+```
+
+默认情况下 segmentShift 为 28，segmentMask 为 15，再散列后的数最大是 32 位二进制数据，向右无符号移动 28 位，意思是让高 4 位参与到散列运算中，`(hash>>>segmentShift) &segmentMask` 的运算结果分别是 4、15、7 和 8，可以看到散列值没有发生冲突。
+
+
+
+### 6.1.5 ConcurrentHashMap 的操作
+
+#### 1）get 操作
+
+Segment 的 get 操作实现非常简单和高效。先经过一次再散列，然后使用这个散列值通过散列运算定位到 Segment，再通过散列算法定位到元素，代码如下：
+
+```java
+public V get(Object key) {
+	int hash = hash(key.hashCode());
+	return segmentFor(hash).get(key, hash);
+}
+```
+
+get 操作的高效之处在于**整个 get 过程不需要加锁，除非读到的值是空才会加锁重读**。
+
+***
+
+我们知道 HashTable 容器的 get 方法是需要加锁的，那么 ConcurrentHashMap 的 get 操作是如何做到不加锁的呢？原因是**它的 get 方法里将要使用的共享变量都定义成 volatile 类型**，如用于统计当前 Segement 大小的 count 字段和用于存储值的 HashEntry 的 value。
+
+```java
+transient volatile int count;
+volatile V value;
+```
+
+**定义成 volatile 的变量，能够在线程之间保持可见性，能够被多线程同时读，并且保证不会读到过期的值，但是只能被单线程写**（有一种情况可以被多线程写，就是写入的值不依赖于原值），在 get 操作里只需要读不需要写共享变量 count 和 value，所以可以不用加锁。之所以不会读到过期的值，是因为**根据 Java 内存模型的 happen before 原则，对 volatile 字段的写入操作先于读操作，即使两个线程同时修改和获取 volatile 变量，get 操作也能拿到最新的值，这是用 volatile 替换锁的经典应用场景。** 
+
+***
+
+```java
+hash >>> segmentShift) &segmentMask // 定位 Segment 所使用的 hash 算法
+int index = hash & (tab.length - 1); // 定位 HashEntry 所使用的 hash 算法
+```
+
+在定位元素的代码里可以发现，定位 HashEntry 和定位 Segment 的散列算法虽然一样，都与数组的长度减去 1 再相“与”，但是相“与”的值不一样，定位 Segment 使用的是元素的 hashcode 通过再散列后得到的值的高位，而定位 HashEntry 直接使用的是再散列后的值。其目的是避免两次散列后的值一样，虽然元素在 Segment 里散列开了，但是却没有在 HashEntry 里散列开。 
+
+
+
+#### 2）put 操作
+
+由于 put 方法里需要对共享变量进行写入操作，所以为了线程安全，在操作共享变量时必须加锁。**put 方法首先定位到 Segment，然后在 Segment 里进行插入操作。插入操作需要经历两个步骤，第一步判断是否需要对 Segment 里的 HashEntry 数组进行扩容，第二步定位添加元素的位置，然后将其放在 HashEntry 数组里。**
+
+##### a. 是否需要扩容
+
+在插入元素前会先判断 Segment 里的 HashEntry 数组是否超过容量（threshold），如果超过阈值，则对数组进行扩容。值得一提的是，Segment 的扩容判断比 HashMap 更恰当，因为 HashMap 是在插入元素后判断元素是否已经到达容量的，如果到达了就进行扩容，但是很有可能扩容之后没有新元素插入，这时 HashMap 就进行了一次无效的扩容。
+
+##### b. 如何扩容
+
+在扩容的时候，首先会创建一个**容量是原来容量两倍的数组**，然后**将原数组里的元素进行再散列后插入到新的数组里**。为了高效，**ConcurrentHashMap 不会对整个容器进行扩容，而只对某个 segment 进行扩容。** 
+
+
+
+#### 3）size 操作
+
+如果要统计整个 ConcurrentHashMap 里元素的大小，就必须统计所有 Segment 里元素的大小后求和。Segment 里的全局变量 count 是一个 volatile 变量，那么在多线程场景下，是不是直接把所有 Segment 的 count 相加就可以得到整个 ConcurrentHashMap 大小了呢？不是的，虽然相加时可以获取每个 Segment 的 count 的最新值，但是可能累加前使用的 count 发生了变化，那么统计结果就不准了。所以，最安全的做法是在统计 size 的时候把所有 Segment 的 put、remove 和 clean 方法全部锁住，但是这种做法显然非常低效。
+
+因为在累加 count 操作过程中，之前累加过的 count 发生变化的几率非常小，所以 ConcurrentHashMap 的做法是**先尝试 2 次通过不锁住 Segment 的方式来统计各个 Segment 大小，如果统计的过程中，容器的 count 发生了变化，则再采用加锁的方式来统计所有 Segment 的大小。**
+
+那么 ConcurrentHashMap 是如何判断在统计的时候容器是否发生了变化呢？使用 **modCount 变量**，**在 put、remove 和 clean 方法里操作元素前都会将变量 modCount 进行加 1**，那么在统计 size 前后比较 modCount 是否发生变化，从而得知容器的大小是否发生变化。
+
+
+
+## 6.2 ConcurrentLinkedQueue
+
+在并发编程中，有时候需要使用线程安全的队列。如果要实现一个线程安全的队列有两种方式：一种是使用阻塞算法，另一种是使用非阻塞算法。使用阻塞算法的队列可以用一个锁（入队和出队用同一把锁）或两个锁（入队和出队用不同的锁）等方式来实现。非阻塞的实现方式则可以使用循环 CAS 的方式来实现。
+
+**ConcurrentLinkedQueue 是一个基于链接节点的无界线程安全队列**，它采用**先进先出**的规则对节点进行排序，当我们添加一个元素的时候，它会添加到队列的尾部；当我们获取一个元素时，它会返回队列头部的元素。它采用了“**wait-free**”算法（即 CAS 算法）来实现。
+
+
+
+### 6.2.1 ConcurrentLinkedQueue 的结构
+
+通过 ConcurrentLinkedQueue 的类图来分析一下它的结构：
+
+![1638249289661](./imgs/1638249289661.png)
+
+ConcurrentLinkedQueue 由 head 节点和 tail 节点组成，每个节点（Node）由节点元素（item）和指向下一个节点（next）的引用组成，节点与节点之间就是通过这个 next 关联起来，从而组成一张链表结构的队列。**默认情况下 head 节点存储的元素为空，tail 节点等于 head 节点。**
+
+```java
+private transient volatile Node<E> tail = head;
+```
+
+ 
+
+### 6.2.2 入队列
+
+#### 1）入队列的过程
+
+入队列就是**将入队节点添加到队列的尾部**。
+
+为了方便理解入队时队列的变化，以及 head 节点和 tail 节点的变化，这里以一个示例来展开介绍。假设在一个队列中依次插入 4 个节点，为了便于理解，每添加一个节点就做了一个队列的快照图，如图所示。 
+
+![1638249683379](./imgs/1638249683379.png)
+
+- 添加元素 1。队列更新 head 节点的 next 节点为元素 1 节点。又因为 tail 节点默认情况下等于 head 节点，所以它们的 next 节点都指向元素 1 节点。 
+
+- 添加元素 2。队列首先设置元素 1 节点的 next 节点为元素 2 节点，然后更新 tail 节点指向元素 2 节点。
+
+- 添加元素 3，设置 tail 节点的 next 节点为元素 3 节点。 
+
+- 添加元素 4，设置元素 3 的 next 节点为元素 4 节点，然后将 tail 节点指向元素 4 节点。
+
+通过调试入队过程并观察 head 节点和 tail 节点的变化，发现入队主要做两件事情：第一是**将入队节点设置成当前队列尾节点的下一个节点**；第二是**更新 tail 节点**，如果 tail 节点的 next 节点不为空，则将入队节点设置成 tail 节点，如果 tail 节点的 next 节点为空，则将入队节点设置成 tail 的 next 节点，所以 **tail 节点不总是尾节点**。 
+
+
+
+通过对上面的分析，我们从单线程入队的角度理解了入队过程，但是多个线程同时进行入队的情况就变得更加复杂了，因为可能会出现其他线程插队的情况。**如果有一个线程正在入队，那么它必须先获取尾节点，然后设置尾节点的下一个节点为入队节点，但这时可能有另外一个线程插队了，那么队列的尾节点就会发生变化，这时当前线程要暂停入队操作，然后重新获取尾节点。**通过源码来详细分析一下它是如何使用 CAS 算法来入队的：
+
+```java
+public boolean offer(E e) {
+    if (e == null) throw new NullPointerException();
+    // 入队前，创建一个入队节点
+    Node<E> n = new Node<E>(e);
+    retry:
+    // 死循环，入队不成功反复入队。
+    for (; ; ) {
+        // 创建一个指向 tail 节点的引用
+        Node<E> t = tail;
+        // p 用来表示队列的尾节点，默认情况下等于 tail 节点。
+        Node<E> p = t;
+        for (int hops = 0; ; hops++) { // 获得 p 节点的下一个节点。
+            Node<E> next = succ(p);
+            // next 节点不为空，说明 p 不是尾节点，需要更新 p 后在将它指向 next 节点
+            if (next != null) {
+                // 循环了两次及其以上，并且当前节点还是不等于尾节点
+                if (hops > HOPS && t != tail) continue retry;
+                p = next;
+            }
+            // 如果 p 是尾节点，则设置 p 节点的 next 节点为入队节点。
+            else if (p.casNext(null, n)) {
+                /*如果 tail 节点有大于等于 1 个 next 节点，则将入队节点设置成 tail 节点， 
+                更新失败了也没关系，因为失败了表示有其他线程成功更新了 tail 节点*/
+                if (hops >= HOPS)
+                	casTail(t, n); // 更新 tail 节点，允许失败
+                return true;
+            }
+            // p 有 next 节点,表示 p 的 next 节点是尾节点，则重新设置 p 节点
+            else {
+            	p = succ(p);
+            }
+        }
+    } 
+}
+```
+
+从源代码角度来看，整个入队过程主要做两件事情：第一是**定位出尾节点**；第二是**使用 CAS 算法将入队节点设置成尾节点的 next 节点，如不成功则重试。**
+
+
+
+#### 2）定位尾节点
+
+tail 节点并不总是尾节点，所以每次入队都必须先通过 tail 节点来找到尾节点。**尾节点可能是 tail 节点，也可能是 tail 节点的 next 节点。**代码中循环体中的第一个 if 就是判断 tail 是否有 next 节点，有则表示 next 节点可能是尾节点。获取 tail 节点的 next 节点需要注意的是 p 节点等于 p 的 next 节点的情况，只有一种可能就是 p 节点和 p 的 next 节点都等于空，表示这个队列刚初始化，正准备添加节点，所以需要返回 head 节点。
+
+获取 p 节点的 next 节点代码如下：
+
+```java
+final Node<E> succ(Node<E> p) {
+	Node<E> next = p.getNext();
+	return (p == next) head:
+	next; 
+}
+```
+
+
+
+#### 3）设置入队节点为尾节点
+
+`p.casNext(null，n)` 方法用于将入队节点设置为当前队列尾节点的 next 节点，如果 p 是 null，表示 p 是当前队列的尾节点，如果不为 null，表示有其他线程更新了尾节点，则需要重新获取当前队列的尾节点。
+
+
+
+#### 4）HOPS 的设计意图
+
+```java
+private static final int HOPS = 1;
+```
+
+使用 hops 变量来**控制并减少 tail 节点的更新频率**，并不是每次节点入队后都将 tail 节点更新成尾节点，而是当 tail 节点和尾节点的距离大于等于常量 HOPS 的值（默认等于 1）时才更新 tail 节点，tail 和尾节点的距离越长，使用 CAS 更新 tail 节点的次数就会越少，但是距离越长带来的负面效果就是每次入队时定位尾节点的时间就越长，因为循环体需要多循环一次来定位出尾节点，但是这样仍然能提高入队的效率，因为从本质上来看它**通过增加对 volatile 变量的读操作来减少对 volatile 变量的写操作，而对 volatile 变量的写操作开销要远远大于读操作，所以入队效率会有所提升。** 
+
+> **注意：**入队方法永远返回 true，所以不要通过返回值判断是否成功。
+
+
+
+### 6.2.3 出队列
+
+出队列的就是**从队列里返回一个节点元素，并清空该节点对元素的引用。**
+
+通过每个节点出队的快照来观察一下 head 节点的变化，如图所示：
+
+![1638251398412](./imgs/1638251398412.png)
+
+从图中可知，**并不是每次出队时都更新 head 节点，当 head 节点里有元素时，直接弹出 head 节点里的元素，而不会更新 head 节点。只有当 head 节点里没有元素时，出队操作才会更新 head 节点。**这种做法也是通过 hops 变量来减少使用 CAS 更新 head 节点的消耗，从而提高出队效率。 
+
+***
+
+通过源码来深入分析下出队过程：
+
+```java
+public E poll() {
+    Node<E> h = head;
+    // p 表示头节点，需要出队的节点
+    Node<E> p = h;
+    for (int hops = 0; ; hops++) {
+        // 获取 p 节点的元素
+        E item = p.getItem();
+        // 如果 p 节点的元素不为空，使用 CAS 设置 p 节点引用的元素为 null, 
+        // 如果成功则返回 p 节点的元素。
+        if (item != null && p.casItem(item, null)) {
+            if (hops >= HOPS) {
+                // 将 p 节点下一个节点设置成 head 节点
+                Node<E> q = p.getNext();
+                updateHead(h, (q != null)q :p);
+            }
+            return item;
+        }
+        // 如果头节点的元素为空或头节点发生了变化，这说明头节点已经被另外
+        // 一个线程修改了。那么获取 p 节点的下一个节点
+        Node<E> next = succ(p);
+        // 如果 p 的下一个节点也为空，说明这个队列已经空了
+        if (next == null) { // 更新头节点。
+            updateHead(h, p);
+            break;
+        }
+        // 如果下一个元素不为空，则将头节点的下一个节点设置成头节点
+        p = next;
+    }
+    return null; 
+}
+```
+
+首先获取头节点的元素，然后判断头节点元素是否为空，如果为空，表示另外一个线程已经进行了一次出队操作将该节点的元素取走，如果不为空，则使用 CAS 的方式将头节点的引用设置成 null，如果 CAS 成功，则直接返回头节点的元素，如果不成功，表示另外一个线程已经进行了一次出队操作更新了 head 节点，导致元素发生了变化，需要重新获取头节点。 
+
+
+
+## 6.3 Java 中的阻塞队列
+
+
+
+### 6.3.1 什么是阻塞队列
+
+阻塞队列（BlockingQueue）是一个**支持两个附加操作的队列**。这两个附加的操作支持阻塞的插入和移除方法。 
+
+- 支持阻塞的插入方法：当队列满时，队列会阻塞插入元素的线程，直到队列不满。 
+
+- 支持阻塞的移除方法：在队列为空时，获取元素的线程会等待队列变为非空。
+
+阻塞队列常用于**生产者和消费者**的场景，生产者是向队列里添加元素的线程，消费者是从队列里取元素的线程。阻塞队列就是生产者用来存放元素、消费者用来获取元素的容器。在阻塞队列不可用时，这两个附加操作提供了 4 种处理方式，如下表所示：
+
+![1638253487357](./imgs/1638253487357.png)
+
+- **抛出异常**：当队列满时，如果再往队列里插入元素，会抛出 IllegalStateException（"Queue full"）异常。当队列空时，从队列里获取元素会抛出 NoSuchElementException 异常。 
+
+- **返回特殊值**：当往队列插入元素时，会返回元素是否插入成功，成功返回 true。如果是移除方法，则是从队列里取出一个元素，如果没有则返回 null。 
+
+- **一直阻塞**：当阻塞队列满时，如果生产者线程往队列里 put 元素，队列会一直阻塞生产者线程，直到队列可用或者响应中断退出。当队列空时，如果消费者线程从队列里 take 元素，队列会阻塞住消费者线程，直到队列不为空。 
+
+- **超时退出**：当阻塞队列满时，如果生产者线程往队列里插入元素，队列会阻塞生产者线程一段时间，如果超过了指定的时间，生产者线程就会退出。 
+
+>注意:
+>
+>如果是无界阻塞队列，队列不可能会出现满的情况，所以使用 put 或 offer 方法永远不会被阻塞，而且使用 offer 方法时，该方法永远返回 true。 
+
+
+
+### 6.3.2 Java 里的阻塞队列
+
+JDK 7 提供了 7 个阻塞队列，如下：
+
+- **ArrayBlockingQueue**：一个由数组结构组成的有界阻塞队列
+- **LinkedBlockingQueue**：一个由链表结构组成的有界阻塞队列
+- **PriorityBlockingQueue**：一个支持优先级排序的无界阻塞队列
+- **DelayQueue**：一个使用优先级队列实现的无界阻塞队列
+- **SynchronousQueue**：一个不存储元素的阻塞队列
+- **LinkedTransferQueue**：一个由链表结构组成的无界阻塞队列
+- **LinkedBlockingDeque**：一个由链表结构组成的双向阻塞队列
+
+
+
+#### 1）ArrayBlockingQueue
+
+ArrayBlockingQueue 是一个用**数组**实现的**有界阻塞队列**。此队列按照**先进先出（FIFO）**的原则对元素进行排序。
+
+默认情况下不保证线程公平的访问队列，所谓公平访问队列是指阻塞的线程，可以按照阻塞的先后顺序访问队列，即先阻塞线程先访问队列。非公平性是对先等待的线程是非公平的，当队列可用时，阻塞的线程都可以争夺访问队列的资格，有可能先阻塞的线程最后才访问队列。为了保证公平性，通常会降低吞吐量。可以使用以下代码创建一个公平的阻塞队列：
+
+```java
+ArrayBlockingQueue fairQueue = new ArrayBlockingQueue(1000, true);
+```
+
+**访问者的公平性是使用可重入锁实现的**，代码如下：
+
+```java
+public ArrayBlockingQueue(int capacity, boolean fair) {
+    if (capacity <= 0) throw new IllegalArgumentException();
+    this.items = new Object[capacity];
+    lock = new ReentrantLock(fair);
+    notEmpty = lock.newCondition();
+    notFull = lock.newCondition();
+}
+```
+
+
+
+#### 2）LinkedBlockingQueue
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
