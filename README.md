@@ -22,11 +22,11 @@
 
 - [Java并发](./Java_Concurrency/Java并发编程.md)
 - [Java集合](./Java_Container/Java集合.md)
-- JVM（代填坑）
+- JVM（待填坑）
 
 ### MySQL
 
-- MySQL（代填坑）
+- MySQL（待填坑）
 
 - [MySQL题目解析](./MySQL/MySQL题目解析.md)
 - [《MySQL实战45讲》-基础篇(1~8)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲-基础篇(1~8).md)
@@ -36,15 +36,16 @@
 
 ### 计算机网络
 
-- #### B站湖南科技大学计算机网络学习笔记
-
+- **B站湖南科技大学计算机网络学习笔记**
+  - `视频地址`：[计算机网络微课堂（有字幕无背景音乐版）](https://www.bilibili.com/video/BV1c4411d7jb?share_source=copy_web)
   - [计算机网络第1章（概述）](./NetWork/湖科大计算机网络学习笔记/计算机网络第一章（概述）/计算机网络第1章（概述）.md)
+  - [计算机网络第2章（物理层）](./NetWork/湖科大计算机网络学习笔记/计算机网络第二章（物理层）/计算机网络第2章（物理层）.md)
 
 
 
 ### 操作系统
 
-- 操作系统（代填坑）
+- 操作系统（待填坑）
 
 - [操作系统题目解析](./OS/操作系统考题解析.md)
 - [Linux常用命令](./Linux_Command/Linux常用命令.md)
