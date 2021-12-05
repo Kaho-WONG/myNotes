@@ -1081,7 +1081,7 @@ class MonitorExample {
 
 
 
-# 4. Java 并发编程基础
+# 4. Java 并发编程基础【重点】
 
 线程作为操作系统调度的最小单元，多个线程能够同时执行，这将显著提升程序性能，在多核环境中表现得更加明显。但是，过多地创建线程和对线程的不当管理也容易造成问题。
 
@@ -1746,7 +1746,7 @@ Profiler 可以被复用在方法调用耗时统计的功能上，在方法的�
 
 
 
-# 5. Java 中的锁
+# 5. Java 中的锁【重点】
 
 
 
@@ -2820,7 +2820,7 @@ Condition 的 `signalAll()` 方法，相当于对等待队列中的每个节点�
 
 
 
-# 6. Java 并发容器和框架
+# 6. Java 并发容器和框架【重点】
 
 
 
@@ -3762,7 +3762,7 @@ private int doJoin() {
 
 
 
-# 7. Java 中的 13 个原子操作类
+# 7. Java 中的 13 个原子操作类【重点】
 
 Java 从 JDK 1.5 开始提供了 `java.util.concurrent.atomic` 包（以下简称 Atomic 包），这个包中的原子操作类提供了一种用法简单、性能高效、线程安全地更新一个变量的方式。因为变量的类型有很多种，所以在 Atomic 包里一共提供了 13 个类，属于 4 种类型的原子更新方式，分别是**原子更新基本类型**、**原子更新数组**、**原子更新引用**和**原子更新属性（字段）**。Atomic 包里的类基本都是使用 Unsafe 实现的包装类。
 
@@ -3770,7 +3770,7 @@ Java 从 JDK 1.5 开始提供了 `java.util.concurrent.atomic` 包（以下简�
 
 ## 7.1 原子更新基本类型类
 
-使用原子的方式更新基本类型，Atomic 包提供了以下 3 个类：
+使用原子的方式更新**基本类型**，Atomic 包提供了以下 3 个类：
 
 - **AtomicBoolean**：原子更新布尔类型。 
 
@@ -3794,7 +3794,7 @@ Java 从 JDK 1.5 开始提供了 `java.util.concurrent.atomic` 包（以下简�
 
 AtomicInteger 示例代码如下所示：
 
-AtomicIntegerTest.java：
+> AtomicIntegerTest.java：
 
 ```java
 import java.util.concurrent.atomic.AtomicInteger;
@@ -3821,7 +3821,7 @@ public class AtomicIntegerTest {
 
 `getAndIncrement` 的源码如下代码清单所示：
 
-AtomicInteger.java：
+> AtomicInteger.java：
 
 ```java
 public final int getAndIncrement() {
@@ -3843,7 +3843,7 @@ public final boolean compareAndSet(int expect, int update) {
 
 Atomic 包提供了 3 种基本类型的原子更新，但是 Java 的基本类型里还有 char、float 和 double 等。那么问题来了，如何原子的更新其他的基本类型呢？Atomic 包里的类基本都是使用 Unsafe 实现的，看一下 Unsafe 的源码，如代码清单所示：
 
-Unsafe.java：
+> Unsafe.java：
 
 ```java
 /**
@@ -3863,7 +3863,7 @@ public final native boolean compareAndSwapLong(Object o, long offset, long expec
 
 ## 7.2 原子更新数组
 
-通过原子的方式更新数组里的某个元素，Atomic 包提供了以下 4 个类：
+通过原子的方式更新**数组里的某个元素**，Atomic 包提供了以下 3 个类：
 
 - **AtomicIntegerArray**：原子更新整型数组里的元素。 
 
@@ -3873,7 +3873,166 @@ public final native boolean compareAndSwapLong(Object o, long offset, long expec
 
 
 
-**AtomicIntegerArray** 类主要是提供原子的方式更新数组里的整型，其常用方法如下。
+**AtomicIntegerArray** 类主要是提供原子的方式更新数组里的整型，其常用方法如下：
+
+- `int addAndGet(int i, int delta)`：以原子方式将输入值与数组中索引 i 的元素相加。 
+
+- `boolean compareAndSet(int i, int expect, int update)`：如果当前值等于预期值，则以原子方式将数组位置 i 的元素设置成 update 值。 
+
+
+
+以上几个类提供的方法几乎一样，所以这里仅以 AtomicIntegerArray 为例进行讲解， AtomicIntegerArray 的使用实例代码如下代码清单所示：
+
+> AtomicIntegerArrayTest.java：
+
+```java
+public static void main(String[] args) {
+    static int[] value = new int[]{1，2};
+    static AtomicIntegerArray ai = new AtomicIntegerArray(value);
+    ai.getAndSet(0， 3);
+    System.out.println(ai.get(0));
+    System.out.println(value[0]);
+}
+```
+
+以下是输出的结果：
+
+```
+3
+1
+```
+
+>需要注意的是，数组 value 通过构造方法传递进去，然后 AtomicIntegerArray 会将当前数组复制一份，所以当 AtomicIntegerArray 对内部的数组元素进行修改时，不会影响传入的数组。
+
+
+
+## 7.3 原子更新引用类型
+
+原子更新基本类型的 AtomicInteger，只能更新一个变量，如果要**原子更新多个变量**，就需要使用这个原子更新**引用类型**提供的类。Atomic 包提供了以下 3 个类：
+
+- **AtomicReference**：原子更新引用类型。 
+
+- **AtomicReferenceFieldUpdater**：原子更新引用类型里的字段。
+
+- **AtomicMarkableReference**：原子更新带有标记位的引用类型。可以原子更新一个布尔类型的标记位和引用类型。构造方法是 `AtomicMarkableReference(V initialRef, boolean initialMark)`
+
+以上几个类提供的方法几乎一样，所以这里仅以 AtomicReference 为例进行讲解，AtomicReference 的使用示例代码如代码清单所示：
+
+> AtomicReferenceTest.java：
+
+```java
+public class AtomicReferenceTest {
+    public static AtomicReference<user> atomicUserRef = new
+    AtomicReference<user>();
+    
+    public static void main(String[] args) {
+        User user = new User("conan"， 15);
+        atomicUserRef.set(user);
+        User updateUser = new User("Shinichi"， 17); 
+        atomicUserRef.compareAndSet(user， updateUser);
+        System.out.println(atomicUserRef.get().getName());
+        System.out.println(atomicUserRef.get().getOld());
+    }
+    
+    static class User {
+        private String name;
+        private int old;
+        
+        public User(String name， int old) {
+            this.name = name;
+            this.old = old;
+        }
+        
+        public String getName() {
+        	return name;
+        }
+        
+        public int getOld() {
+        	return old;
+        }
+    } 
+}
+```
+
+代码中首先构建一个 user 对象，然后把 user 对象设置进 AtomicReferenc 中，最后调用 `compareAndSet` 方法进行原子更新操作，实现原理同 AtomicInteger 里的 `compareAndSet` 方法。代码执行后输出结果如下：
+
+```
+Shinichi
+17
+```
+
+
+
+## 7.4 原子更新字段类
+
+如果需原子地更新**某个类里的某个字段**时，就需要使用原子更新字段类，Atomic 包提供了以下 3 个类进行原子字段更新：
+
+- **AtomicIntegerFieldUpdater**：原子更新整型的字段的更新器。 
+
+- **AtomicLongFieldUpdater**：原子更新长整型字段的更新器。 
+
+- **AtomicStampedReference**：原子更新带有版本号的引用类型。该类将整数值与引用关联起来，可用于原子的更新数据和数据的版本号，可以解决使用 CAS 进行原子更新时可能出现的 ABA 问题。 
+
+
+
+要想原子地更新字段类需要两步：
+
+1. 第一步，因为原子更新字段类都是抽象类，每次使用的时候必须使用静态方法 `newUpdater()`创建一个更新器，并且需要设置想要更新的类和属性。
+
+2. 第二步，更新类的字段（属性）必须使用 `public volatile` 修饰符。
+
+
+
+以上 3 个类提供的方法几乎一样，所以这里仅以 AtomicIntegerFieldUpdater 为例进行讲解， AtomicIntegerFieldUpdater 的示例代码如代码清单所示：
+
+> AtomicIntegerFieldUpdaterTest.java：
+
+```java
+public class AtomicIntegerFieldUpdaterTest {
+    // 创建原子更新器，并设置需要更新的对象类和对象的属性
+    private static AtomicIntegerFieldUpdater<User> a = AtomicIntegerFieldUpdater.
+    newUpdater(User.class， "old");
+    
+    public static void main(String[] args) { // 设置柯南的年龄是 10 岁
+        User conan = new User("conan"， 10);
+        // 柯南长了一岁，但是仍然会输出旧的年龄
+        System.out.println(a.getAndIncrement(conan));
+        // 输出柯南现在的年龄
+        System.out.println(a.get(conan));
+    }
+    
+    public static class User {
+        private String name;
+        public volatile int old;
+        
+        public User(String name， int old) {
+            this.name = name;
+            this.old = old;
+        }
+        
+        public String getName() {
+        	return name;
+        }
+        
+        public int getOld() {
+        	return old;
+        }
+    } 
+}
+```
+
+代码执行后输出如下：
+
+```
+10
+11
+```
+
+
+
+
+
+# 8. Java 中的并发工具类【重点】
 
 
 
