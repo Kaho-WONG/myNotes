@@ -39,6 +39,16 @@
 - **Redis 设计与实现学习笔记**
   - [数据结构](./Redis/Redis设计与实现笔记/Redis设计与实现-1-数据结构.md)
   - [对象](./Redis/Redis设计与实现笔记/Redis设计与实现-2-对象.md)
+  - [数据库](./Redis/Redis设计与实现笔记/Redis设计与实现-3-数据库.md)
+  - [RDB 和 AOF](./Redis/Redis设计与实现笔记/Redis设计与实现-4-RDB持久化和AOF持久化.md)
+  - [事件](./Redis/Redis设计与实现笔记/Redis设计与实现-5-事件.md)
+  - [客户端与服务器](./Redis/Redis设计与实现笔记/Redis设计与实现-6-客户端与服务器.md)
+  - [复制](./Redis/Redis设计与实现笔记/Redis设计与实现-7-复制.md)
+  - [Sentinel](./Redis/Redis设计与实现笔记/Redis设计与实现-8-Sentinel.md)
+  - [集群](./Redis/Redis设计与实现笔记/Redis设计与实现-9-集群.md)
+  - [发布与订阅](./Redis/Redis设计与实现笔记/Redis设计与实现-10-发布与订阅.md)
+  - [事务](./Redis/Redis设计与实现笔记/Redis设计与实现-11-事务.md)
+  - [Lua 脚本](./Redis/Redis设计与实现笔记/Redis设计与实现-12-Lua脚本.md)
 
 ### 计算机网络
 
