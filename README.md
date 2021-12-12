@@ -21,17 +21,17 @@
 ### Java
 
 - **[《Java 并发编程的艺术》学习笔记](./Java_Concurrency/Java并发编程的艺术学习笔记/Java并发编程.md)**
-  1. [并发编程的挑战](./Java_Concurrency/Java并发编程的艺术学习笔记/1-并发编程的挑战.md)
-  2. [Java 并发机制的底层实现原理](./Java_Concurrency/Java并发编程的艺术学习笔记/2-Java 并发机制的底层实现原理.md)
-  3. [Java 内存模型](./Java_Concurrency/Java并发编程的艺术学习笔记/3-Java 内存模型.md)
-  4. [Java 并发编程基础【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/4-Java 并发编程基础[重点].md)
-  5. [Java 中的锁【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/5-Java 中的锁[重点].md)
-  6. [Java 并发容器和框架【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/6-Java 并发容器和框架[重点].md)
-  7. [Java 中的 13 个原子操作类【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/7-Java 中的 13 个原子操作类[重点].md)
-  8. [Java 中的并发工具类【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/8-Java 中的并发工具类[重点].md)
-  9. [Java 中的线程池【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/9-Java 中的线程池[重点].md)
-  10. [Executor 框架](./Java_Concurrency/Java并发编程的艺术学习笔记/10-Executor 框架.md)
-  11. [Java 并发编程实践](./Java_Concurrency/Java并发编程的艺术学习笔记/11-Java 并发编程实践.md)
+  - [并发编程的挑战](./Java_Concurrency/Java并发编程的艺术学习笔记/1-并发编程的挑战.md)
+  - [Java 并发机制的底层实现原理](./Java_Concurrency/Java并发编程的艺术学习笔记/2-Java 并发机制的底层实现原理.md)
+  - [Java 内存模型](./Java_Concurrency/Java并发编程的艺术学习笔记/3-Java 内存模型.md)
+  - [Java 并发编程基础【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/4-Java 并发编程基础[重点].md)
+  - [Java 中的锁【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/5-Java 中的锁[重点].md)
+  - [Java 并发容器和框架【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/6-Java 并发容器和框架[重点].md)
+  - [Java 中的 13 个原子操作类【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/7-Java 中的 13 个原子操作类[重点].md)
+  - [Java 中的并发工具类【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/8-Java 中的并发工具类[重点].md)
+  - [Java 中的线程池【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/9-Java 中的线程池[重点].md)
+  - [Executor 框架](./Java_Concurrency/Java并发编程的艺术学习笔记/10-Executor 框架.md)
+  - [Java 并发编程实践](./Java_Concurrency/Java并发编程的艺术学习笔记/11-Java 并发编程实践.md)
 - [Java集合](./Java_Container/Java集合.md)
 - **《深入理解Java虚拟机》学习笔记**
 
