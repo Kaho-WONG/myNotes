@@ -22,7 +22,7 @@
 
 - **[《Java 并发编程的艺术》学习笔记](./Java_Concurrency/Java并发编程的艺术学习笔记/Java并发编程.md)**
   - [并发编程的挑战](./Java_Concurrency/Java并发编程的艺术学习笔记/1-并发编程的挑战.md)
-  - [Java 并发机制的底层实现原理](./Java_Concurrency/Java并发编程的艺术学习笔记/2-Java 并发机制的底层实现原理.md)
+  - [Java 并发机制的底层实现原理](./Java_Concurrency/Java并发编程的艺术学习笔记/2-Java%2F并发机制的底层实现原理.md)
   - [Java 内存模型](./Java_Concurrency/Java并发编程的艺术学习笔记/3-Java 内存模型.md)
   - [Java 并发编程基础【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/4-Java 并发编程基础.md)
   - [Java 中的锁【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/5-Java 中的锁.md)
