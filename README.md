@@ -66,6 +66,8 @@
   - [事务](./Redis/Redis设计与实现笔记/Redis设计与实现-11-事务.md)
   - [Lua 脚本](./Redis/Redis设计与实现笔记/Redis设计与实现-12-Lua脚本.md)
 
+- **[Redis 简单应用场景总结](./Redis/Redis的简单应用场景总结.md)**
+
 
 
 ### 计算机网络
