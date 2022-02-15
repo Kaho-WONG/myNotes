@@ -1467,7 +1467,7 @@ Map 是一种**键-值对（key-value）**集合，Map 集合中的**每一个�
 
 > 如果需要存储几百万个学生，而且经常需要使用学号来搜索某个学生，那么这个需求有效的数据结构就是Map。 
 
-<img src="C:\Users\王嘉豪\AppData\Roaming\Typora\typora-user-images\1629788940349.png" alt="1629788940349" style="zoom:67%;" />
+<img src="./images/1629788940349.png" alt="1629788940349" style="zoom:67%;" />
 
 
 
@@ -1488,7 +1488,7 @@ Map 是一种**键-值对（key-value）**集合，Map 集合中的**每一个�
 
 ### 3. Map 的结构体系
 
-<img src="C:\Users\王嘉豪\AppData\Roaming\Typora\typora-user-images\1630048100635.png" alt="1630048100635" style="zoom:67%;" />
+<img src="./images/1630048100635.png" alt="1630048100635" style="zoom:67%;" />
 
 
 
