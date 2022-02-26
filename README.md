@@ -4,13 +4,13 @@
 
 
 
-## 项目介绍💬
+## 仓库介绍💬
 
 这个仓库用来存放我在自学计算机过程中的所做的学习笔记，涵盖了诸如**计算机基础、Java、算法与数据结构**等等领域的知识。
 
 做这份笔记的目的是为了在学习过程中能总结好相关要点，便于日后复习自省~~~
 
-笔记全部是用 `markdown` 格式文档编写，部分知识学习借鉴于几位公众号主（帅地玩编程、Java3y、三太子敖丙、JavaGuide、代码随想录 ...）。
+笔记全部是用 `markdown` 格式文档编写
 
 
 
@@ -24,15 +24,15 @@
     - [并发编程的挑战](./Java_Concurrency/Java并发编程的艺术学习笔记/1-并发编程的挑战.md)
     - [Java 并发机制的底层实现原理](./Java_Concurrency/Java并发编程的艺术学习笔记/2-Java并发机制的底层实现原理.md)
     - [Java 内存模型](./Java_Concurrency/Java并发编程的艺术学习笔记/3-Java内存模型.md)
-    - [Java 并发编程基础【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/4-Java并发编程基础.md)
-    - [Java 中的锁【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/5-Java中的锁.md)
-    - [Java 并发容器和框架【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/6-Java并发容器和框架.md)
-    - [Java 中的 13 个原子操作类【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/7-Java中的13个原子操作类.md)
-    - [Java 中的并发工具类【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/8-Java中的并发工具类.md)
-    - [Java 中的线程池【重点】](./Java_Concurrency/Java并发编程的艺术学习笔记/9-Java中的线程池.md)
+    - [Java 并发编程基础](./Java_Concurrency/Java并发编程的艺术学习笔记/4-Java并发编程基础.md)
+    - [Java 中的锁](./Java_Concurrency/Java并发编程的艺术学习笔记/5-Java中的锁.md)
+    - [Java 并发容器和框架](./Java_Concurrency/Java并发编程的艺术学习笔记/6-Java并发容器和框架.md)
+    - [Java 中的 13 个原子操作类](./Java_Concurrency/Java并发编程的艺术学习笔记/7-Java中的13个原子操作类.md)
+    - [Java 中的并发工具类](./Java_Concurrency/Java并发编程的艺术学习笔记/8-Java中的并发工具类.md)
+    - [Java 中的线程池](./Java_Concurrency/Java并发编程的艺术学习笔记/9-Java中的线程池.md)
     - [Executor 框架](./Java_Concurrency/Java并发编程的艺术学习笔记/10-Executor框架.md)
     - [Java 并发编程实践](./Java_Concurrency/Java并发编程的艺术学习笔记/11-Java并发编程实践.md)
-- **[Java 集合](./Java_Container/Java集合.md)**
+- **[Java 容器](./Java_Container/Java集合.md)**
 - **Java 虚拟机**
   - **《深入理解Java虚拟机》学习笔记**
     - [JVM 内存结构](./JVM/深入理解java虚拟机学习笔记/JVM内存结构.md)
@@ -44,9 +44,10 @@
 
 ### MySQL
 
-- MySQL（待填坑）
-- **[MySQL题目解析](./MySQL/MySQL题目解析.md)**
-- **《MySQL实战45讲》学习笔记**
+- SQL
+- MySQL 学习笔记
+- **[MySQL 重要知识点总结](./MySQL/MySQL题目解析.md)**
+- **《MySQL实战45讲》笔记**
   - [《MySQL实战45讲》-基础篇(1~8)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲-基础篇(1~8).md)
   - [《MySQL实战45讲》-实践篇(9~45)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲-实践篇(9~45).md)
 - **[JDBC](./JDBC/JDBC.md)**
@@ -55,6 +56,7 @@
 
 ### Redis
 
+- Redis 学习笔记
 - **《Redis 设计与实现》学习笔记**
   - [数据结构](./Redis/Redis设计与实现笔记/Redis设计与实现-1-数据结构.md)
   - [对象](./Redis/Redis设计与实现笔记/Redis设计与实现-2-对象.md)
@@ -68,7 +70,6 @@
   - [发布与订阅](./Redis/Redis设计与实现笔记/Redis设计与实现-10-发布与订阅.md)
   - [事务](./Redis/Redis设计与实现笔记/Redis设计与实现-11-事务.md)
   - [Lua 脚本](./Redis/Redis设计与实现笔记/Redis设计与实现-12-Lua脚本.md)
-
 - **[Redis 简单应用场景总结](./Redis/Redis的简单应用场景总结.md)**
 
 
@@ -85,6 +86,8 @@
 
 ### 计算机网络
 
+- 计算机网络学习笔记
+- HTTP 详解
 - **B站湖南科技大学计算机网络学习笔记**（`视频地址`：[计算机网络微课堂（有字幕无背景音乐版）](https://www.bilibili.com/video/BV1c4411d7jb?share_source=copy_web)）
   - [概述](./NetWork/湖科大计算机网络学习笔记/计算机网络第一章（概述）/计算机网络第1章（概述）.md)
   - [物理层](./NetWork/湖科大计算机网络学习笔记/计算机网络第二章（物理层）/计算机网络第2章（物理层）.md)
@@ -97,7 +100,8 @@
 
 ### 操作系统
 
-- **[操作系统重要知识点](./OS/操作系统考题解析.md)**
+- **[操作系统学习笔记](./OS/操作系统学习笔记.md)**
+- **[操作系统重要知识点总结](./OS/操作系统考题解析.md)**
 - **[Linux常用命令](./Linux_Command/Linux常用命令.md)**
 
 
@@ -107,13 +111,6 @@
 - Spring
 - SpringMVC
 - MyBatis
-- Spring Boot
-
-
-
-### 消息队列
-
-- RabbitMQ
 
 
 
@@ -121,13 +118,13 @@
 
 - **[设计模式学习笔记](./Design_Patterns/设计模式.md)**
 
-- **[动态代理](./Dynamic_Proxy/动态代理.md)**
+- **[java 动态代理详解](./Dynamic_Proxy/动态代理.md)**
 
 
 
 ### 工具
 
-- **[Maven](./Maven/maven笔记.md)**
+- **[Maven 学习笔记](./Maven/maven笔记.md)**
 
 - **[Git 命令大全](./Git/Git命令大全.md)**
 
