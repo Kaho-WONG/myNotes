@@ -19,6 +19,7 @@
 ### Java
 
 - **Java 基础**
+- **[Java 容器](./Java_Container/Java集合.md)**
 - **Java 并发**
   - **[《Java 并发编程的艺术》学习笔记](./Java_Concurrency/Java并发编程的艺术学习笔记/Java并发编程.md)**
     - [并发编程的挑战](./Java_Concurrency/Java并发编程的艺术学习笔记/1-并发编程的挑战.md)
@@ -32,7 +33,6 @@
     - [Java 中的线程池](./Java_Concurrency/Java并发编程的艺术学习笔记/9-Java中的线程池.md)
     - [Executor 框架](./Java_Concurrency/Java并发编程的艺术学习笔记/10-Executor框架.md)
     - [Java 并发编程实践](./Java_Concurrency/Java并发编程的艺术学习笔记/11-Java并发编程实践.md)
-- **[Java 容器](./Java_Container/Java集合.md)**
 - **Java 虚拟机**
   - **《深入理解Java虚拟机》学习笔记**
     - [JVM 内存结构](./JVM/深入理解java虚拟机学习笔记/JVM内存结构.md)
@@ -80,14 +80,13 @@
 
 - **[常见算法解析](./Algorithm/常见算法解析.md)**
 
-- **[算法刷题笔记](./Algorithm/算法刷题笔记.md)**
 
 
 
 ### 计算机网络
 
-- 计算机网络学习笔记
-- HTTP 详解
+- **[计算机网络学习笔记](./NetWork/计算机网络.md)**
+- **[HTTP 详解](./NetWork/HTTP详解.md)**
 - **B站湖南科技大学计算机网络学习笔记**（`视频地址`：[计算机网络微课堂（有字幕无背景音乐版）](https://www.bilibili.com/video/BV1c4411d7jb?share_source=copy_web)）
   - [概述](./NetWork/湖科大计算机网络学习笔记/计算机网络第一章（概述）/计算机网络第1章（概述）.md)
   - [物理层](./NetWork/湖科大计算机网络学习笔记/计算机网络第二章（物理层）/计算机网络第2章（物理层）.md)
