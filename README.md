@@ -26,7 +26,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
   
   - **[Java 多线程—基础](./Java_Concurrency/Java多线程基础.md)**
   
-    <img src="./Java_Concurrency/imgs/1646217362224.png" alt="1646217362224" style="zoom: 50%;" align="left"/>
+    ![1646219305118](./Java_Concurrency/imgs/1646217362224.png)
   
   - **[Java 多线程—原理](./Java_Concurrency/Java多线程原理.md)**
   

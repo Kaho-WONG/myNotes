@@ -202,7 +202,7 @@ Thread(Runnable target, String name)
 
 
 
-#### 1.5 Thread 类与 Runnable 接口的比较：
+#### 1.5 Thread 类与 Runnable 接口的比较
 
 实现一个自定义的线程类，可以有继承 `Thread` 类或者实现 `Runnable` 接口这两种方式，它们之间有什么优劣呢？
 
