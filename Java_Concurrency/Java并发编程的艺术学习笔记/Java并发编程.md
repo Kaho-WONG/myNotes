@@ -3381,7 +3381,7 @@ SynchronousQueue 是一个**不存储元素**的**阻塞队列**。**每一个 p
 
 ```java
 public SynchronousQueue(boolean fair) {
-	transferer = fair new TransferQueue() :new TransferStack();
+	transferer = fair ? new TransferQueue() :new TransferStack();
 }
 ```
 
@@ -3428,7 +3428,7 @@ LinkedBlockingDeque 是一个由**链表**结构组成的**双向阻塞队列**�
 
 > 如果队列是空的，消费者会一直等待，当生产者添加元素时，消费者是如何知道当前队列有元素的呢？JDK 是如何设计阻塞队列的，如何让生产者和消费者进行高效率的通信呢？
 
-**使用通知模式实现。**所谓通知模式，就是**当生产者往满的队列里添加元素时会阻塞住生产者，当消费者消费了一个队列中的元素后，会通知生产者当前队列可用。**
+**使用通知模式实现**。所谓通知模式，就是**当生产者往满的队列里添加元素时会阻塞住生产者，当消费者消费了一个队列中的元素后，会通知生产者当前队列可用。**
 
 通过查看 JDK 源码发现 ArrayBlockingQueue 使用了 **Condition** 来实现，代码如下：
 
@@ -4576,9 +4576,7 @@ milliseconds,runnableTaskQueue, handler);
 
   - **DiscardOldestPolicy**：丢弃队列里最近的一个任务，并执行当前任务。 
 
-  - 
-
-**DiscardPolicy**：不处理，丢弃掉。 
+  - **DiscardPolicy**：不处理，丢弃掉。 
 
 > 也可以根据应用场景需要来实现RejectedExecutionHandler 接口自定义策略。如记录日志或持久化存储不能处理的任务。 
 
