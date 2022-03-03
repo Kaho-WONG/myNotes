@@ -36,10 +36,11 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
   
   - **[Java 多线程— JDK 工具](./Java_Concurrency/Java多线程工具.md)**
   
-  - **[《Java 并发编程的艺术》学习笔记](./Java_Concurrency/Java并发编程的艺术学习笔记/Java并发编程.md)**
+  - **[《Java 并发编程的艺术》学习笔记](./Java_Concurrency/Java并发编程的艺术学习笔记/Java并发编程.md)**（[书籍链接](https://book.douban.com/subject/26591326/)）
   
 - **Java 虚拟机**
-  - **《深入理解Java虚拟机》学习笔记**
+  
+  - **《深入理解Java虚拟机》学习笔记**（[书籍链接](https://book.douban.com/subject/34907497/)）
     - [JVM 内存结构](./JVM/深入理解java虚拟机学习笔记/JVM内存结构.md)
     - [JVM 垃圾收集与内存分配](./JVM/深入理解java虚拟机学习笔记/JVM垃圾收集与内存分配.md)
     - [类文件结构](./JVM/深入理解java虚拟机学习笔记/类文件结构.md)
@@ -52,7 +53,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 - SQL
 - MySQL 学习笔记
 - **[MySQL 重要知识点总结](./MySQL/MySQL题目解析.md)**
-- **《MySQL实战45讲》笔记**
+- **《MySQL实战45讲》笔记**（[专栏链接](https://time.geekbang.org/column/intro/100020801)）
   - [《MySQL实战45讲》-基础篇(1~8)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲-基础篇(1~8).md)
   - [《MySQL实战45讲》-实践篇(9~45)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲-实践篇(9~45).md)
 - **[JDBC](./JDBC/JDBC.md)**
@@ -62,7 +63,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 ### Redis🧱
 
 - Redis 学习笔记
-- **《Redis 设计与实现》学习笔记**
+- **《Redis 设计与实现》学习笔记**（[书籍链接](https://book.douban.com/subject/25900156/)）
   - [数据结构](./Redis/Redis设计与实现笔记/Redis设计与实现-1-数据结构.md)
   - [对象](./Redis/Redis设计与实现笔记/Redis设计与实现-2-对象.md)
   - [数据库](./Redis/Redis设计与实现笔记/Redis设计与实现-3-数据库.md)
@@ -92,7 +93,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 
 - **[计算机网络学习笔记](./NetWork/计算机网络.md)**
 - **[HTTP 详解](./NetWork/HTTP详解.md)**
-- **B站湖南科技大学计算机网络学习笔记**（`视频地址`：[计算机网络微课堂（有字幕无背景音乐版）](https://www.bilibili.com/video/BV1c4411d7jb?share_source=copy_web)）
+- **B站湖南科技大学计算机网络学习笔记**（[视频链接](https://www.bilibili.com/video/BV1c4411d7jb?share_source=copy_web)）
   - [概述](./NetWork/湖科大计算机网络学习笔记/计算机网络第一章（概述）/计算机网络第1章（概述）.md)
   - [物理层](./NetWork/湖科大计算机网络学习笔记/计算机网络第二章（物理层）/计算机网络第2章（物理层）.md)
   - [数据链路层](./NetWork/湖科大计算机网络学习笔记/计算机网络第三章（数据链路层）/计算机网络第3章（数据链路层）.md)
