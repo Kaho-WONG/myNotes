@@ -41,7 +41,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
   
   - **[Java 多线程— JDK 工具](./Java_Concurrency/Java多线程工具.md)**
   
-    ![1646409091655](C:\Users\王嘉豪\AppData\Roaming\Typora\typora-user-images\1646409091655.png)
+    ![1646409091655](./Java_Concurrency/imgs/1646409091655.png)
   
   - **[《Java 并发编程的艺术》学习笔记](./Java_Concurrency/Java并发编程的艺术学习笔记/Java并发编程.md)**（[书籍链接](https://book.douban.com/subject/26591326/)）
   
