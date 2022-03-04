@@ -4127,7 +4127,7 @@ CountDownLatch 的构造函数接收一个 int 类型的参数作为计数器，
 
 CyclicBarrier 默认的构造方法是 `CyclicBarrier(int parties)`，其参数表示屏障拦截的线程数量，每个线程调用 `await` 方法告诉 CyclicBarrier 我已经到达了屏障，然后当前线程被阻塞。示例代码如代码清单所示：
 
-> CyclicBarrierTest.java：
+CyclicBarrierTest.java：
 
 ```java
 public class CyclicBarrierTest {
