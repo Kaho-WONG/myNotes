@@ -223,7 +223,7 @@ Thread(Runnable target, String name)
 
 基于这种情况，JDK 提供了 `Callable` 接口与 `Future` 接口为我们解决这个问题，这也是所谓的“**异步**”模型。
 
-#### 2.1 Callable接口
+#### 2.1 Callable 接口
 
 `Callable` 与 `Runnable`类似，同样是只有一个抽象方法的函数式接口。不同的是，`Callable` 提供的方法是**有返回值**的，而且支持**泛型**。
 
@@ -269,9 +269,9 @@ class Task implements Callable<Integer>{
 
 
 
-#### 2.2 Future接口
+#### 2.2 Future 接口
 
-`Future `接口只有几个比较简单的方法：
+`Future` 接口只有几个比较简单的方法：
 
 ```java
 public abstract interface Future<V> {
@@ -292,7 +292,7 @@ public abstract interface Future<V> {
 
 
 
-#### 2.3 FutureTask类
+#### 2.3 FutureTask 类
 
 上面介绍了 `Future` 接口。这个接口有一个实现类叫 `FutureTask`。`FutureTask` 是实现的 `RunnableFuture` 接口的，而 `RunnableFuture` 接口同时继承了 `Runnable` 接口和 `Future` 接口：
 
@@ -337,7 +337,7 @@ class Task implements Callable<Integer>{
 
 
 
-#### 2.4 FutureTask的几个状态
+#### 2.4 FutureTask 的几个状态
 
 ```java
 /**
@@ -566,7 +566,7 @@ public class ThreadGroupDemo {
 ```java
 public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     private final ThreadGroup parent; // 父ThreadGroup
-    String name; // ThreadGroupr 的名称
+    String name; // ThreadGroup 的名称
     int maxPriority; // 线程最大优先级
     boolean destroyed; // 是否被销毁
     boolean daemon; // 是否守护线程
@@ -1379,7 +1379,7 @@ test
 
 #### 5.1 join() 方法
 
-`join()` 方法是 Thread 类的一个实例方法。它的作用是让当前线程陷入“等待”状态，等 join 的这个线程执行完成后，再继续执行当前线程。
+`join()` 方法是 Thread 类的一个实例方法。它的作用是**让当前线程陷入“等待”状态，等 join 的这个线程执行完成后，再继续执行当前线程**。
 
 有时候，主线程创建并启动了子线程，如果子线程中需要进行大量的耗时运算，主线程往往将早于子线程结束之前结束。
 
@@ -1421,7 +1421,7 @@ public class Join {
 
 #### 5.2 sleep() 方法
 
-`sleep()` 方法是 Thread 类的一个静态方法。它的作用是让当前线程睡眠一段时间。它有这样两个方法：
+`sleep()` 方法是 Thread 类的一个静态方法。它的作用是**让当前线程睡眠一段时间**。它有这样两个方法：
 
 - `Thread.sleep(long)`
 - `Thread.sleep(long, int)`
@@ -1436,11 +1436,11 @@ public class Join {
 
 - wait 可以指定时间，也可以不指定；而 sleep 必须指定时间。
 - wait 释放 cpu 资源，同时释放锁；sleep 释放 cpu 资源，但是不释放锁，所以易死锁。
-- wait 必须放在同步块或同步方法中，而 sleep 可以在任意位置。
+- **wait 必须放在同步块或同步方法中，而 sleep 可以在任意位置**。
 
 
 
-#### 5.3 ThreadLocal类
+#### 5.3 ThreadLocal 类
 
 **ThreadLocal，即线程本地变量，是一个以 ThreadLocal 对象为键、任意对象为值的 Map 存储结构。**这个结构被附带在线程上，也就是说**一个线程可以根据一个 ThreadLocal 对象查询到绑定在这个线程上的一个值**。可以通过 `set(T)` 方法来设置一个值，在当前线程下再通过 `get()` 方法获取到原先设置的值。严格来说，ThreadLocal 类并不属于多线程间的通信，而是**让每个线程有自己”独立“的变量，线程之间互不影响**。它为每个线程都创建一个**副本**，每个线程可以访问自己内部的副本变量。
 
@@ -1483,7 +1483,9 @@ Profiler 可以被复用在方法调用耗时统计的功能上，在方法的�
 
 **ThreadLocal 的适用场景：**
 
-如果开发者希望将类的某个静态变量（user ID 或者 transaction ID）与线程状态关联，则可以考虑使用ThreadLocal。
+当我们只想在本身的线程内使用的变量，可以用 ThreadLocal 来实现，并且这些变量是和线程的生命周期密切相关的，线程结束，变量也就销毁了。 
+
+如果开发者希望将类的某个静态变量（user ID 或者 transaction ID）与线程状态关联，则可以考虑使用 ThreadLocal。
 
 最常见的 ThreadLocal 使用场景为用来解决数据库连接、Session 管理等。数据库连接和 Session 管理涉及多个复杂对象的初始化和关闭。如果在每个线程中声明一些私有变量来进行操作，那这个线程就变得不那么“轻量”了，需要频繁的创建和关闭连接。
 

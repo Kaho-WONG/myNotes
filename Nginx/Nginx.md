@@ -574,7 +574,7 @@ nginx 监听端口为 `9001`：
 
 添加一个 server 块：
 
-![1637471994427](D:\CodeLearning\ComputerScience\MyNote-git\Nginx\imgs\1637471994427.png)
+![1637471994427](./imgs/1637471994427.png)
 
 #### （2）开放对外访问的端口号
 
@@ -636,7 +636,7 @@ firewall-cmd --add-port=8081/tcp --permanent
 
 1. 在 **http 块**中加上一个 `upstream`：
 
-   ![1637473613561](D:\CodeLearning\ComputerScience\MyNote-git\Nginx\imgs\1637473613561.png)
+   ![1637473613561](./imgs/1637473613561.png)
 
    可以在 ip 地址后加上 `weight = 数字` 分配服务器权重。
 
