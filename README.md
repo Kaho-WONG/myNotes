@@ -57,7 +57,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 
 ### MySQL🐬
 
-- SQL
+- **[SQL](./MySQL/SQL/SQL.md)**
 - MySQL 学习笔记
 - **[MySQL 重要知识点总结](./MySQL/MySQL题目解析.md)**
 - **《MySQL实战45讲》笔记**（[专栏链接](https://time.geekbang.org/column/intro/100020801)）
