@@ -61,8 +61,9 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 - MySQL 学习笔记
 - **[MySQL 重要知识点总结](./MySQL/MySQL题目解析.md)**
 - **《MySQL实战45讲》笔记**（[专栏链接](https://time.geekbang.org/column/intro/100020801)）
-  - [《MySQL实战45讲》-基础篇(1~8)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲-基础篇(1~8).md)
-  - [《MySQL实战45讲》-实践篇(9~45)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲-实践篇(9~45).md)
+  - [《MySQL实战45讲》(1~15)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲(1~15).md)
+  - [《MySQL实战45讲》(16~30)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲(16~30).md)
+  - [《MySQL实战45讲》(31~45)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲(31~45).md)
 - **[JDBC](./JDBC/JDBC.md)**
 
 
