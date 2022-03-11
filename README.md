@@ -131,7 +131,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 
 - **[设计模式学习笔记](./Design_Patterns/设计模式.md)**
 
-- **[java 动态代理详解](./Dynamic_Proxy/动态代理.md)**
+- **[java 动态代理详解](./Design_Patterns/Dynamic_Proxy/动态代理.md)**
 
 
 
@@ -147,3 +147,4 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 
 - **[Nginx 服务器](./Nginx/Nginx.md)**
 
+- **[Github 操作](https://developer.aliyun.com/article/755244?spm=a2c6h.13262185.0.0.5a4f5c48gAwpAO)**
