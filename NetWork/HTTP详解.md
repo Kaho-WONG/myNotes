@@ -17,7 +17,7 @@
 
 ## 1. HTTP 基本概念
 
-HTTP（HyperText Transfer Protocol，超文本传输协议）是一个在计算机世界里专门在**「两点」**之间**「传输」**文字、图片、音频、视频等**「超文本」**数据的**「约定和规范」**。
+HTTP（HyperText Transfer Protocol，超文本传输协议）是一个在计算机世界里专门在「两点」之间**「**传输**」**文字、图片、音频、视频等「超文本」数据的「约定和规范」。
 
 
 
@@ -41,11 +41,11 @@ HTTP 报文大致可分为**报文首部**和**报文主体**两块。两者由�
 
 ### 1. 请求报文
 
-![image-20201024224828528](https://gitee.com/coder-kaho/myNotes/raw/master/NetWork/%E6%B9%96%E7%A7%91%E5%A4%A7%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E7%AC%AC%E5%85%AD%E7%AB%A0%EF%BC%88%E5%BA%94%E7%94%A8%E5%B1%82%EF%BC%89/imgs/20201025113917.png) 
+![image-20201024224828528](./湖科大计算机网络学习笔记/计算机网络第六章（应用层）/imgs/20201025113917.png) 
 
 ### 2. 响应报文
 
-![image-20201024224920638](https://gitee.com/coder-kaho/myNotes/raw/master/NetWork/%E6%B9%96%E7%A7%91%E5%A4%A7%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E7%AC%AC%E5%85%AD%E7%AB%A0%EF%BC%88%E5%BA%94%E7%94%A8%E5%B1%82%EF%BC%89/imgs/20201025113924.png) 
+![image-20201024224920638](./湖科大计算机网络学习笔记/计算机网络第六章（应用层）/imgs/20201025113924.png) 
 
 
 
@@ -451,6 +451,8 @@ HTTP 是一种不保存状态，即无状态（stateless）协议。**HTTP 协�
 
 持久连接需要使用 `Connection` 首部字段进行管理。HTTP/1.1 开始 HTTP 默认是持久化连接的，如果要断开 TCP 连接，需要由客户端或者服务器端提出断开，使用 `Connection : close`；而在 HTTP/1.1 之前默认是非持久化连接的，如果要维持持续连接，需要使用 `Connection : Keep-Alive`。
 
+> TCP中 的 keepalive 是用来保鲜、保活的；HTTP中的 keep-alive 机制主要为了让支撑它的 TCP 连接活的的更久，所以通常又叫做：HTTP persistent connection（持久连接） 
+
 
 
 ## 3. 管线化传输
@@ -838,7 +840,7 @@ HTTP**S** 在 HTTP 与 TCP 层之间加入了 `SSL/TLS` 协议，可以很好的
 
 ### 3. HTTPS 采用的加密方式
 
-HTTPS 采用的是对称加密和非对称加密结合的**「混合加密」**机制：
+HTTPS 采用的是对称加密和非对称加密结合的「混合加密」机制：
 
 - 在通信建立前采用**非对称加密**的方式交换「会话秘钥」，后续就不再使用非对称加密。 
 - 在通信过程中全部使用**对称加密**的「会话秘钥」的方式加密明文数据。
