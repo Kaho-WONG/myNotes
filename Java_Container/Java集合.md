@@ -1194,7 +1194,7 @@ HashSet( int initialCapacity, float loadFactor, boolean dummy) {
 
 #### 3.3 add 方法
 
-HashSet 的 add 方法时**通过 HashMap 的 put 方法**实现的，不过 HashMap 是 key-value 键值对，而 HashSet 是集合，那么是怎么存储的呢，我们看一下源码 ：
+HashSet 的 add 方法是**通过 HashMap 的 put 方法**实现的，不过 HashMap 是 key-value 键值对，而 HashSet 是集合，那么是怎么存储的呢，我们看一下源码 ：
 
 ```java
 private static final Object PRESENT = new Object();
@@ -1547,6 +1547,10 @@ Map 是一种**键-值对（key-value）**集合，Map 集合中的**每一个�
 JDK1.8 之前 HashMap 由 **数组+链表** 组成的，数组是 HashMap 的主体，链表则是主要为了解决哈希冲突而存在的（“拉链法”解决冲突）。 JDK1.8 以后的 HashMap 在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认为 8）（将链表转换成红黑树前会判断，如果当前数组的长度小于 64，那么会选择先进行数组扩容，而不是转换为红黑树）时，将链表转化为红黑树，以减少搜索时间。 
 
 `HashMap` 默认的初始化大小为 16。之后每次扩充，容量变为原来的 2 倍。并且， `HashMap` 总是使用 2 的幂作为哈希表的大小。 
+
+> HashMap 总是以 2 的整数次方作为大小的原因？
+>
+> 目的主要是为了减少哈希碰撞，使 table 里的数据分布的更均匀。 
 
 ![1636889496356](./images/1636889496356.png)
 
@@ -3924,7 +3928,7 @@ private final void transfer(Node<K, V>[] tab, Node<K, V>[] nextTab) {
 - Hashtable 是将所有的方法进行同步，效率低下。而ConcurrentHashMap 作为⼀个高并发的容器，它是通过 **部分锁定+CAS 算法** 来进行实现线程安全的。CAS 算法也可以认为是乐观锁的一种
 - 在高并发环境下，统计数据（计算 size 等等）其实是无意义的，因为在下一刻 size 的值就变化了
 - get 方法是非阻塞的，无锁的。重写 Node 类，通过 volatile 修饰 next 来实现每次获取都是最新设置的值
-- **ConcurrentHashMap **的 **key** 和 **Value** 都不能为 **null**
+- **ConcurrentHashMap** 的 **key** 和 **Value** 都不能为 **null**
 
 
 
@@ -4044,11 +4048,25 @@ private final void transfer(Node<K, V>[] tab, Node<K, V>[] nextTab) {
 
 ## HashMap 的 size 为什么必须是 2 的整数次方？
 
-1. 这样做总是能够保证 HashMap 的底层数组长度为 2 的 n 次方。当 length 为 2 的 n 次方时，` index = HashCode（Key） & （Length- 1） ` 就相当于对 length 取模，而且速度比直接取模快得多，这是 HashMap 在速度上的一个优化。而且每次扩容时都是翻倍。
+1. 这样做总是能够保证 HashMap 的底层数组长度为 2 的 n 次方。当 length 为 2 的 n 次方时，` index = HashCode(Key) & (Length-1) ` 就相当于对 length 取模，而且速度比直接取模快得多，这是 HashMap 在速度上的一个优化。而且每次扩容时都是翻倍。
 
-2. 如果 length 为 2 的次幂，则 length – 1 转化为二进制必定是 11111……的形式，在与 hashcode 的二进制进行与操作时效率会非常的快，而且空间不浪费。
+2. 如果 length 为 2 的次幂，则 `length – 1` 转化为二进制必定是 11111……的形式，在与 hashcode 的二进制进行与操作时效率会非常的快，而且空间不浪费。
 
    但是，如果 length 不是 2 的次幂，比如：length 为 15，则 length – 1 为 14，对应的二进制为 1110，在和 hashcode 与操作，最后一位都为 0 ，而 0001，0011，0101，1001，1011，0111，1101 这几个位置永远都不能存放元素了，空间浪费相当大，更糟的是这种情况中，数组可以使用的位置比数组长度小了很多，这意味着进一步增加了碰撞的几率，减慢了查询的效率，这样就会造成空间的浪费。
+
+
+
+## HashMap 的加载因子为什么是 0.75？
+
+这是“哈希冲突”和“空间利用率”的折中。
+
+**加载因子**是表示 Hsah 表中元素的填满的程度。加载因子越大，填满的元素越多，空间利用率越高，但冲突的机会加大了。反之，加载因子越小，填满的元素越少，冲突的机会减小，但空间浪费多了。
+
+冲突的机会越大，则查找的成本越高。反之，查找的成本越小。
+
+因此，必须在 "冲突的机会"与"空间利用率"之间寻找一种平衡与折中。
+
+### 
 
 
 
@@ -4228,7 +4246,7 @@ final  Segment<K,V>[]  segments;
 
 Segment 继承了 ReentrantLock，所以它就是一种可重入锁（ReentrantLock)。在 ConcurrentHashMap，一个 Segment 就是一个子哈希表，Segment 里维护了一个 HashEntry 数组，并发环境下，对于不同 Segment 的数据进行操作是不用考虑锁竞争的。就按默认的 ConcurrentLevel 为 16 来讲，理论上就允许 16 个线程并发执行。
 
-所以，**对于同一个 Segment 的操作才需考虑线程同步，不同的 Segment 则无需考虑。**Segment 类似于 HashMap，一个 Segment 维护着一个HashEntry 数组：
+所以，**对于同一个 Segment 的操作才需考虑线程同步，不同的 Segment 则无需考虑**。Segment 类似于 HashMap，一个 Segment 维护着一个HashEntry 数组：
 
 ```java
 transient  volatile  HashEntry<K,V>[]  table;
