@@ -81,7 +81,7 @@ HTTP 报文大致可分为**报文首部**和**报文主体**两块。两者由�
 
 **1. 传参方式**
 
-GET 和 POST 的请求都能使用额外的参数，但是 **GET 的参数是以查询字符串出现在 URL 中**，而 **POST 的参数存储在内容实体**。
+GET 和 POST 的请求都能使用额外的参数，但是 **GET 的参数是以查询字符串出现在 URL 中**，而 **POST 的参数存储在内容实体**。所以 GET 有长度限制，而 POST 数据大小无限制。
 
 ```properties
 GET /test/demo_form.asp?name1=value1&name2=value2 HTTP/1.1
@@ -93,7 +93,7 @@ Host: w3schools.com
 name1=value1&name2=value2
 ```
 
-GET 的传参方式相比于 POST 安全性较差，因为 GET 传的参数在 URL 中是可见的，可能会泄露私密信息。并且 GET 只支持 ASCII 字符，如果参数为中文则可能会出现乱码，而 POST 支持标准字符集。
+GET 的传参方式相比于 POST 安全性较差，因为 GET 传的参数在 URL 中是可见的，可能会泄露私密信息。并且 **GET 只支持 ASCII 字符**，如果参数为中文则可能会出现乱码，而 **POST 支持标准字符集**。
 
 **2. 安全幂等**
 
@@ -536,7 +536,7 @@ Set-Cookie 字段的属性：
 
 #### (1) 什么是 Session？
 
-除了可以将用户信息通过 Cookie 存储在用户浏览器中，也可以利用 Session 存储在服务器端，存储在服务器端的信息更加安全。Session 可以存储在服务器上的文件、数据库或者内存中。也可以将 Session 存储在 Redis 这种内存型数据库中，效率会更高。
+除了可以将用户信息通过 Cookie 存储在用户浏览器中，也可以利用 **Session 存储在服务器端**，存储在服务器端的信息**更加安全**。Session 可以存储在服务器上的文件、数据库或者内存中。也可以将 Session 存储在 Redis 这种内存型数据库中，效率会更高。
 
 Session 是服务器用来跟踪用户的一种手段，每个 Session 都有一个唯一标识：`Session ID`。当服务器创建了一个 Session 时，给客户端发送的响应报文包含了 `Set-Cookie` 字段，其中有一个名为 `sid` 的键值对，这个键值对就是 `Session ID`。客户端收到后就把 Cookie 保存在浏览器中，并且之后发送的请求报文都包含 `Session ID`。HTTP 就是通过 Session 和 Cookie 这两种方式一起合作来实现跟踪用户状态的，**Session 用于服务器端，Cookie 用于客户端（浏览器端）。**
 
@@ -544,10 +544,10 @@ Session 是服务器用来跟踪用户的一种手段，每个 Session 都有一
 
 #### (2) Session 的使用过程（举例）
 
-- 用户进行登录时，用户提交包含用户名和密码的表单，放入 HTTP 请求报文中；
-- 服务器验证该用户名和密码，如果正确则把用户信息存储到 Redis 中（也可存储在服务器上的文件、数据库或者内存中），它在 Redis 中的 Key 称为 Session ID；
-- 服务器返回的响应报文的 Set-Cookie 首部字段包含了这个 Session ID，客户端收到响应报文之后将该 Cookie 值存入浏览器中；
-- 客户端之后对同一个服务器进行请求时会包含该 Cookie 值，服务器收到之后提取出 Session ID，从 Redis 中取出用户信息，继续之前的业务操作。
+1. 用户进行登录时，用户提交包含用户名和密码的表单，放入 HTTP 请求报文中；
+2. 服务器验证该用户名和密码，如果正确则把用户信息存储到 Redis 中（也可存储在服务器上的文件、数据库或者内存中），它在 Redis 中的 Key 称为 Session ID；
+3. 服务器返回的**响应报文的 Set-Cookie 首部字段包含了这个 Session ID**，客户端收到响应报文之后将该 Cookie 值存入浏览器中；
+4. 客户端之后对同一个服务器进行请求时会包含该 Cookie 值，服务器收到之后提取出 Session ID，从 Redis 中取出用户信息，继续之前的业务操作。
 
 
 
@@ -564,7 +564,7 @@ Session 是服务器用来跟踪用户的一种手段，每个 Session 都有一
 Cookie 和 Session 都是客户端与服务器之间保持状态的解决方案：
 
 1. 存储的位置不同：Cookie 存放在客户端，Session 存放在服务端。Session 存储的数据比较安全。
-2. 存储的数据类型不同：两者都是 key-value 的结构，但针对 value 的类型是有差异的。cookie：value只能是字符串类型；session：value 是 Object 类型。
+2. 存储的数据类型不同：两者都是 `key-value` 的结构，但针对 value 的类型是有差异的。cookie：value只能是字符串类型；session：value 是 Object 类型。
 3. 存储的数据大小限制不同：Cookie 大小受浏览器的限制，很多是 4K 的大小；Session 理论上受当前内存的限制。
 4. 生命周期的控制：Cookie 的生命周期是累计的，从创建时就开始计时，20分钟后，Cookie 生命周期结束；Session 的生命周期是间隔的，从创建时开始计时，如在20分钟内没有访问 Session，那么 Session 就被销毁。
 
@@ -880,11 +880,11 @@ HTTPS 采用的是对称加密和非对称加密结合的「混合加密」机�
 
 ## HTTP 和 HTTPS 的区别
 
-1. 端口不同：HTTP使用的是 80 端口，HTTPS使用 443 端口；
-2. URL 前缀不同：HTTP 的 URL 前缀是 `http://`，HTTPS 的 URL 前缀是 `https://`；
-3. HTTP（超文本传输协议）信息是明文传输，HTTPS 运行在 SSL(Secure Socket Layer) 之上，添加了加密和认证机制，更加安全；
-4. HTTPS 由于加密解密会带来更大的 CPU 和内存开销；
-5. HTTPS 通信需要证书，一般需要向证书颁发机构（CA）购买
+1. **端口不同**：HTTP使用的是 80 端口，HTTPS使用 443 端口；
+2. **URL 前缀不同**：HTTP 的 URL 前缀是 `http://`，HTTPS 的 URL 前缀是 `https://`；
+3. HTTP（超文本传输协议）信息是**明文传输**，HTTPS 运行在 SSL(Secure Socket Layer) 之上，添加了**加密和认证**机制，更加安全；
+4. HTTPS 由于加密解密会带来更大的 CPU 和内存**开销**；
+5. HTTPS 通信需要**证书**，一般需要向证书颁发机构（CA）购买。
 
 
 
