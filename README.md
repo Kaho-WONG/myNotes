@@ -27,31 +27,31 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 
 - **Java 基础**
 
-- **[Java 容器](./Java_Container/Java集合.md)**
+- **[Java 容器](./Java/Java_Container/Java集合.md)**
 
 - **Java 并发**
   
-  - **[Java 多线程—基础](./Java_Concurrency/Java多线程基础.md)**
+  - **[Java 多线程—基础](./Java/Java_Concurrency/Java多线程基础.md)**
   
-    ![1646219305118](./Java_Concurrency/imgs/1646217362224.png)
+    ![1646219305118](./Java/Java_Concurrency/imgs/1646217362224.png)
   
-  - **[Java 多线程—原理](./Java_Concurrency/Java多线程原理.md)**
+  - **[Java 多线程—原理](./Java/Java_Concurrency/Java多线程原理.md)**
   
-    ![1646300161419](./Java_Concurrency/imgs/1646300161419.png)
+    ![1646300161419](./Java/Java_Concurrency/imgs/1646300161419.png)
   
-  - **[Java 多线程— JDK 工具](./Java_Concurrency/Java多线程工具.md)**
+  - **[Java 多线程— JDK 工具](./Java/Java_Concurrency/Java多线程工具.md)**
   
-    ![1646409091655](./Java_Concurrency/imgs/1646409091655.png)
+    ![1646409091655](./Java/Java_Concurrency/imgs/1646409091655.png)
   
-  - **[《Java 并发编程的艺术》学习笔记](./Java_Concurrency/Java并发编程的艺术学习笔记/Java并发编程.md)**（[书籍链接](https://book.douban.com/subject/26591326/)）
+  - **[《Java 并发编程的艺术》学习笔记](./Java/Java_Concurrency/Java并发编程的艺术学习笔记/Java并发编程.md)**（[书籍链接](https://book.douban.com/subject/26591326/)）
   
 - **Java 虚拟机**
   
   - **《深入理解Java虚拟机》学习笔记**（[书籍链接](https://book.douban.com/subject/34907497/)）
-    - [JVM 内存结构](./JVM/深入理解java虚拟机学习笔记/JVM内存结构.md)
-    - [JVM 垃圾收集与内存分配](./JVM/深入理解java虚拟机学习笔记/JVM垃圾收集与内存分配.md)
-    - [类文件结构](./JVM/深入理解java虚拟机学习笔记/类文件结构.md)
-    - [类加载机制](./JVM/深入理解java虚拟机学习笔记/类加载机制.md)
+    - [JVM 内存结构](./Java/JVM/深入理解java虚拟机学习笔记/JVM内存结构.md)
+    - [JVM 垃圾收集与内存分配](./Java/JVM/深入理解java虚拟机学习笔记/JVM垃圾收集与内存分配.md)
+    - [类文件结构](./Java/JVM/深入理解java虚拟机学习笔记/类文件结构.md)
+    - [类加载机制](./Java/JVM/深入理解java虚拟机学习笔记/类加载机制.md)
 
 
 
@@ -145,7 +145,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
 
 - **[Maven 学习笔记](./Maven/maven笔记.md)**
 
-- **[Git 命令大全](./Git/Git命令大全.md)**
+- **[Git 命令](./Git/Git命令大全.md)**
 
 
 
