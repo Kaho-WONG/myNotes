@@ -64,7 +64,7 @@ Githuber 们大家好！我是**编程**时长两年半(bushi)的个人练习生
   - [《MySQL实战45讲》(1~15)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲(1~15).md)
   - [《MySQL实战45讲》(16~30)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲(16~30).md)
   - [《MySQL实战45讲》(31~45)](./MySQL/《MySQL实战45讲》笔记/MySQL实战45讲(31~45).md)
-- **[JDBC](./JDBC/JDBC.md)**
+- **[JDBC 学习笔记](./Java/JDBC/JDBC.md)**（[视频地址](https://www.bilibili.com/video/BV1eJ411c7rf?share_source=copy_web)）
 
 
 
